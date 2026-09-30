@@ -68,12 +68,15 @@ impl Bvh {
 
     #[inline]
     fn hit_aabb(min: Vec3, max: Vec3, o: Vec3, inv: Vec3, t_max: f32) -> Option<f32> {
-        let tx1 = (min.x - o.x) * inv.x;
-        let tx2 = (max.x - o.x) * inv.x;
-        let ty1 = (min.y - o.y) * inv.y;
-        let ty2 = (max.y - o.y) * inv.y;
-        let tz1 = (min.z - o.z) * inv.z;
-        let tz2 = (max.z - o.z) * inv.z;
+        // Si una componente de la dirección es 0, inv = ±inf y (plano - o) puede ser 0:
+        // 0·inf = NaN. En ese caso el rayo está sobre el plano; lo tratamos como "dentro".
+        let slab = |lo: f32, hi: f32, o: f32, inv: f32| {
+            let (a, b) = ((lo - o) * inv, (hi - o) * inv);
+            (if a.is_nan() { f32::NEG_INFINITY } else { a }, if b.is_nan() { f32::INFINITY } else { b })
+        };
+        let (tx1, tx2) = slab(min.x, max.x, o.x, inv.x);
+        let (ty1, ty2) = slab(min.y, max.y, o.y, inv.y);
+        let (tz1, tz2) = slab(min.z, max.z, o.z, inv.z);
         let tmin = tx1.min(tx2).max(ty1.min(ty2)).max(tz1.min(tz2));
         let tmax = tx1.max(tx2).min(ty1.max(ty2)).min(tz1.max(tz2));
         if tmax >= tmin.max(0.0) && tmin < t_max { Some(tmin) } else { None }

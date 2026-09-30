@@ -199,8 +199,9 @@ pub fn intersect_sphere(ray: &Ray, c: Vec3, r: f32, t_min: f32, t_max: f32) -> O
         }
     }
     let p = ray.origin + ray.dir * t;
-    let n = (p - c) / r;
+    let n = (p - c).normalized();
     let u = 0.5 + n.z.atan2(n.x) / (2.0 * std::f32::consts::PI);
-    let v = 0.5 + n.y.asin() / std::f32::consts::PI;
+    // clamp: por redondeo n.y puede pasar de 1 y asin daría NaN.
+    let v = 0.5 + n.y.clamp(-1.0, 1.0).asin() / std::f32::consts::PI;
     Some(Hit { t, point: p, normal: n, u, v, material: 0 })
 }

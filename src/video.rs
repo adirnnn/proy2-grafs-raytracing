@@ -25,18 +25,18 @@ pub struct VideoSettings {
 #[derive(Clone, Copy)]
 struct Key(f32, f32, f32, f32, [f32; 3]);
 
-const CENTER: [f32; 3] = [0.0, 6.0, -1.0];
+const CENTER: [f32; 3] = [0.0, 7.0, -1.0];
 const BLADE: [f32; 3] = [6.6, 3.5, 2.0];
 const DOME: [f32; 3] = [-2.0, 3.5, -2.0];
 const TREE: [f32; 3] = [-8.0, 4.5, 7.0];
 
 const KEYS: &[Key] = &[
     // Vista héroe con acercamiento lento.
-    Key(0.0, -28.0, 12.0, 40.0, CENTER),
-    Key(4.0, -28.0, 12.0, 35.0, CENTER),
+    Key(0.0, -22.0, 11.0, 38.0, CENTER),
+    Key(4.0, -22.0, 11.0, 33.0, CENTER),
     // Rotación completa del diorama (360°).
-    Key(5.5, -18.0, 16.0, 38.0, CENTER),
-    Key(19.0, 322.0, 16.0, 38.0, CENTER),
+    Key(5.5, -14.0, 15.0, 37.0, CENTER),
+    Key(19.0, 326.0, 15.0, 37.0, CENTER),
     // Zangetsu: reflexión en el acero.
     Key(23.0, 343.0, 10.0, 15.0, BLADE),
     Key(27.0, 353.0, 16.0, 14.0, BLADE),
@@ -50,8 +50,8 @@ const KEYS: &[Key] = &[
     Key(50.0, 440.0, 30.0, 52.0, CENTER),
     Key(54.0, 400.0, 20.0, 46.0, CENTER),
     // Regreso a la vista héroe.
-    Key(58.0, 332.0, 12.0, 38.0, CENTER),
-    Key(60.0, 332.0, 12.0, 38.0, CENTER),
+    Key(58.0, 338.0, 11.0, 33.0, CENTER),
+    Key(60.0, 338.0, 11.0, 33.0, CENTER),
 ];
 
 pub fn duration() -> f32 {

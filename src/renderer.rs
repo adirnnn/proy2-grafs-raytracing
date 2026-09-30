@@ -67,7 +67,7 @@ impl<'a> Tracer<'a> {
         let mut ray = Ray { origin: p, dir };
         let mut left = dist;
         let mut att = Vec3::ONE;
-        for _ in 0..8 {
+        for _ in 0..16 {
             let Some(h) = self.scene.bvh.intersect(&self.scene.objects, &ray, EPS, left) else {
                 return att;
             };
@@ -80,10 +80,11 @@ impl<'a> Tracer<'a> {
             if att.max_component() < 0.02 {
                 return Vec3::ZERO;
             }
-            left -= h.t;
+            left -= h.t + EPS;
             ray.origin = h.point + dir * EPS;
         }
-        att
+        // Demasiadas superficies transparentes seguidas: se considera bloqueada.
+        Vec3::ZERO
     }
 
     pub fn trace(&self, ray: &Ray, depth: u32, weight: f32, rng: &mut Rng) -> Vec3 {
@@ -104,7 +105,9 @@ impl<'a> Tracer<'a> {
         let mut diffuse = self.scene.ambient(n).mul(tex) * m.albedo;
         let mut spec = Vec3::ZERO;
         let view_dir = -d;
-        for light in &self.view.lights {
+        // La cara interior de un cristal no recibe luz directa (vendría desde atrás del cristal).
+        let lights: &[Light] = if inside && m.transparency > 0.0 { &[] } else { &self.view.lights };
+        for light in lights {
             let (l_dir, l_color, l_dist) = match *light {
                 Light::Directional { dir, color, spread } => {
                     let mut ld = dir;

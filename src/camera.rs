@@ -14,8 +14,8 @@ pub struct Camera {
     pub fov_deg: f32,
 }
 
-/// Con la distancia mínima la cámara siempre queda fuera del diorama (radio ~18.7).
-pub const MIN_DISTANCE: f32 = 19.5;
+/// Con la distancia mínima la cámara siempre queda fuera del diorama (radio horizontal ~19.3 + 1 de desplazamiento del objetivo).
+pub const MIN_DISTANCE: f32 = 21.0;
 pub const MAX_DISTANCE: f32 = 70.0;
 pub const MIN_PITCH: f32 = 0.02;
 pub const MAX_PITCH: f32 = 1.35;

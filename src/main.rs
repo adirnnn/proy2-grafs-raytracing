@@ -21,9 +21,9 @@ use std::time::Instant;
 pub const EXPOSURE: f32 = 1.35;
 
 /// Vista "héroe": 3/4, ligeramente baja, mirando la torre y la luna a través del bosque.
-pub const HERO_YAW_DEG: f32 = -28.0;
+pub const HERO_YAW_DEG: f32 = -22.0;
 pub fn hero_camera() -> Camera {
-    Camera { target: Vec3::new(0.0, 6.0, -1.0), pitch: 0.21, distance: 36.0, fov_deg: 45.0 }
+    Camera { target: Vec3::new(0.0, 7.0, -1.0), pitch: 0.19, distance: 33.0, fov_deg: 45.0 }
 }
 
 pub struct Args {
@@ -82,6 +82,14 @@ fn main() {
     cam.pitch = args.num("--pitch", cam.pitch.to_degrees()).to_radians();
     cam.distance = args.num("--dist", cam.distance);
     cam.clamp();
+    // Punto al que mira la cámara: --target x,y,z (para acercamientos de materiales).
+    if let Some(t) = args.get("--target") {
+        let v: Vec<f32> = t.split(',').filter_map(|x| x.parse().ok()).collect();
+        if v.len() == 3 {
+            cam.target = Vec3::new(v[0], v[1], v[2]);
+            cam.distance = args.num("--dist", cam.distance); // sin límite mínimo en renders fijos
+        }
+    }
     let yaw = args.num("--yaw", HERO_YAW_DEG);
 
     if let Some(out) = args.get("--render") {

@@ -103,3 +103,25 @@ fn skybox_ida_y_vuelta() {
         }
     }
 }
+
+#[test]
+fn escena_dentro_de_limites() {
+    use las_noches::scene::build_diorama;
+    let objs = build_diorama();
+    let mut cubes = 0;
+    let mut hmin = Vec3::splat(f32::INFINITY);
+    let mut hmax = Vec3::splat(f32::NEG_INFINITY);
+    for o in &objs {
+        if matches!(o.shape, las_noches::geometry::Shape::Cube { .. }) {
+            cubes += 1;
+        }
+        let (a, b) = o.bounds();
+        hmin = hmin.min(a);
+        hmax = hmax.max(b);
+    }
+    println!("objetos: {}  cubos: {}  límites: {:?} .. {:?}", objs.len(), cubes, hmin, hmax);
+    // La distancia mínima de zoom deja la cámara fuera de todo el diorama
+    // (+1 porque el objetivo de la cámara está desplazado 1 unidad del centro).
+    let r = (hmax.x.abs().max(hmin.x.abs()).powi(2) + hmax.z.abs().max(hmin.z.abs()).powi(2)).sqrt();
+    assert!(r + 1.0 < las_noches::camera::MIN_DISTANCE, "radio horizontal {r}");
+}

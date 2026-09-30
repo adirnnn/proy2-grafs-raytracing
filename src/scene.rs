@@ -137,6 +137,9 @@ pub fn build_diorama() -> Vec<Object> {
 
     // Zócalo de basalto (la "caja" del diorama).
     o.push(cube_at(-13.2, -3.0, -13.2, 26.4, 3.0, 26.4, BASALT));
+    // Moldura de obsidiana alrededor del zócalo.
+    o.push(cube_at(-13.35, -0.75, -13.35, 26.7, 0.35, 26.7, OBSIDIAN).with_uv_scale(0.5));
+    o.push(cube_at(-13.35, -2.95, -13.35, 26.7, 0.25, 26.7, OBSIDIAN).with_uv_scale(0.5));
 
     // Terreno: una columna por celda (un solo cubo alto por columna, UV por bloque).
     for i in -HALF..=HALF {
