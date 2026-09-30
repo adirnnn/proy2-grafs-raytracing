@@ -1,0 +1,19 @@
+[package]
+name = "las_noches"
+version = "1.0.0"
+edition = "2024"
+description = "Proyecto 2 - Diorama con raytracing: Las Noches bajo la Luna Eterna (Rust puro, sin dependencias)"
+default-run = "las_noches"
+
+# Sin dependencias externas: todo usa solo la biblioteca estándar de Rust.
+[dependencies]
+
+[profile.dev]
+opt-level = 3
+debug = false
+
+[profile.release]
+opt-level = 3
+codegen-units = 1
+lto = true
+panic = "abort"
