@@ -3,3 +3,5 @@
 /frames
 *.tmp
 /notas
+/pc_render
+/frames_pc
