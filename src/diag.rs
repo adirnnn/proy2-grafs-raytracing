@@ -62,6 +62,7 @@ pub fn run(assets: &Path, out: &Path) {
         ambient_sky: Vec3::splat(0.25),
         ambient_ground: Vec3::splat(0.15),
         fog_density: 0.0,
+        fog_color: Vec3::ZERO,
     };
     let q = Quality { max_depth: 8, soft_shadows: false };
     let views = [

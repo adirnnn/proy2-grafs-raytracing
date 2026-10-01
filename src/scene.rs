@@ -37,6 +37,9 @@ pub struct Scene {
     pub ambient_ground: Vec3,
     /// Densidad de la niebla por unidad de distancia (0 = sin niebla).
     pub fog_density: f32,
+    /// Color de la niebla: promedio del horizonte del skybox (así el suelo lejano se
+    /// funde con el cielo; al promediar, las estrellas no dejan rayas).
+    pub fog_color: Vec3,
 }
 
 /// Dirección (en el mundo) hacia la luna dibujada en el skybox.
@@ -63,6 +66,7 @@ impl Scene {
             textures.push(Texture::load(&assets.join("textures").join(format!("{}.bmp", m.texture)))?);
         }
         let skybox = Skybox::load(&assets.join("skybox"))?;
+        let fog_color = horizon_color(&skybox);
         let objects = build_diorama();
         let bvh = Bvh::build(&objects);
         let gate = Vec3::new(DOME_C.x, 3.2, DOME_C.z + DRUM_R + 3.2);
@@ -90,8 +94,22 @@ impl Scene {
             ambient_sky: Vec3::new(0.030, 0.034, 0.040),
             ambient_ground: Vec3::new(0.026, 0.026, 0.028),
             fog_density: 0.0065,
+            fog_color,
         })
     }
+}
+
+/// Promedio del cielo en un anillo justo sobre el horizonte.
+pub fn horizon_color(sky: &Skybox) -> Vec3 {
+    let n = 720;
+    let mut acc = Vec3::ZERO;
+    for k in 0..n {
+        let a = k as f32 / n as f32 * 2.0 * PI;
+        for e in [0.01f32, 0.03, 0.05] {
+            acc += sky.sample(Vec3::new(a.sin(), e, a.cos()).normalized());
+        }
+    }
+    acc / (3 * n) as f32
 }
 
 // ----------------------------------------------------------------------------

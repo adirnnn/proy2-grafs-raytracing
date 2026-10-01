@@ -87,14 +87,6 @@ impl<'a> Tracer<'a> {
         Vec3::ZERO
     }
 
-    /// Color de la niebla en la dirección `d`: el cielo justo sobre el horizonte, para que
-    /// el suelo lejano se funda sin costura con el skybox.
-    fn fog_color(&self, d: Vec3) -> Vec3 {
-        let w = self.view.rot.apply(d);
-        let h = Vec3::new(w.x, w.y.max(0.04), w.z).normalized();
-        self.scene.skybox.sample(h)
-    }
-
     pub fn trace(&self, ray: &Ray, depth: u32, weight: f32, rng: &mut Rng) -> Vec3 {
         let Some(hit) = self.scene.bvh.intersect(&self.scene.objects, ray, EPS, FAR) else {
             return self.sky(ray.dir);
@@ -103,7 +95,7 @@ impl<'a> Tracer<'a> {
         // Niebla exponencial con la distancia: oculta el horizonte del suelo y da escala.
         if self.scene.fog_density > 0.0 {
             let f = 1.0 - (-hit.t * self.scene.fog_density).exp();
-            return c.lerp(self.fog_color(ray.dir), f);
+            return c.lerp(self.scene.fog_color, f);
         }
         c
     }

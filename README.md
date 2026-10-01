@@ -100,7 +100,7 @@ Eso abre la ventana interactiva. Otros modos:
 | 5 materiales (textura + albedo, especular, transparencia, reflectividad) | 25 | `src/material.rs`, texturas en `assets/textures/` | [Tabla de materiales](#materiales) |
 | Refracción con sentido | 10 | Árboles muertos de **cuarzo** (IOR 1.54) con Snell, Fresnel y reflexión interna total | `docs/img/mat_cuarzo.png`, `docs/img/diag_frente.png`, video 35–44 s |
 | Reflexión | 5 | **Obsidiana** de la calzada y los monolitos (0.65), **mármol pulido** del salón (0.35) y **acero** de Zangetsu (0.80) | `docs/img/hero.png`, `docs/img/mat_marmol.png`, `docs/img/zangetsu.png`, video 0–5, 24–35 y 44–52 s |
-| Skybox | 20 | Cubemap de 6 caras BMP (`assets/skybox/`), muestreado por **todos** los rayos que no chocan (primarios, reflejados y refractados). La niebla toma su color del horizonte del mismo skybox | Luna, nubes y estrellas en `docs/img/hero.png`; la Garganta solo aparece reflejada |
+| Skybox | 20 | Cubemap de 6 caras BMP (`assets/skybox/`), muestreado por **todos** los rayos que no chocan (primarios, reflejados y refractados). La niebla toma su color del promedio del horizonte del mismo skybox | Luna, nubes y estrellas en `docs/img/hero.png`; la Garganta solo aparece reflejada |
 
 ## Materiales
 
@@ -194,7 +194,7 @@ Escala: 1 unidad ≈ 4 m. La fortaleza mide ~85 m de diámetro, las torres ~115 
    - **Reflexión interna total** cuando `sin²θt > 1`.
    - **Fresnel de Schlick** para repartir reflexión y transmisión.
    - La cara interior de un cristal no recibe luz directa.
-8. **Niebla:** `color = mezcla(color, horizonte_del_skybox, 1 − e^(−d·densidad))`. Se aplica a todos los rayos, así que también a los reflejos y las refracciones.
+8. **Niebla:** `color = mezcla(color, color_horizonte, 1 − e^(−d·densidad))`, donde `color_horizonte` es el promedio del skybox justo sobre el horizonte (se calcula una vez al cargar). Se aplica a todos los rayos, así que también a los reflejos y las refracciones.
 9. **Autointersección:** el origen de los rayos secundarios se desplaza `±N·0.002` según el lado.
 10. **Skybox:** cubemap de 6 caras con convención de OpenGL, muestreado con filtro bilineal fijo al borde de cada cara. Contiene:
     - nubes de tormenta;
