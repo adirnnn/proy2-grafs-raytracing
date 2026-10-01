@@ -250,11 +250,14 @@ Medido con `cargo run --release -- --bench` en la laptop de desarrollo: Intel Co
 
 | Modo | Resolución | Rebotes | Sombras suaves | ms/cuadro |
 |---|---|---:|:---:|---:|
-| Vista previa (en movimiento) | 320×180 | 2 | no | PENDIENTE |
-| Refinado | 640×360 | 6 | sí | PENDIENTE |
-| Final | 1280×720 | 6 | sí | PENDIENTE |
+| Vista previa (en movimiento) | 320×180 | 2 | no | 89.8 (≈11 fps) |
+| Refinado | 640×360 | 6 | sí | 391.0 |
+| Final | 1280×720 | 6 | sí | 1566.9 |
 
-En la ventana (calidad 2), mientras se mueve se renderiza a 426×240 y luego se acumulan muestras a 1280×720. Video (1800 cuadros, 1280×720, 6 spp): PENDIENTE.
+La vista héroe es el caso más pesado: la calzada de obsidiana refleja casi toda la imagen, así que cada píxel traza al menos un rayo extra.
+
+- **Ventana interactiva (calidad 2):** mientras se mueve se renderiza a 426×240, unos 6–8 cuadros por segundo. Al soltar, cada pasada a 1280×720 tarda ~1.6 s, y la imagen se va limpiando a medida que se acumulan muestras.
+- **Video:** 1800 cuadros a 1280×720 y 6 spp. Cada cuadro tardó entre ~3 s (tomas abiertas) y ~13 s (primeros planos del cuarzo), unas 3.5 h de render en total en esta laptop.
 
 ## Verificación
 
