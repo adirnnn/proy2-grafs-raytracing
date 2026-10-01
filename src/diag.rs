@@ -7,7 +7,7 @@ use las_noches::bvh::Bvh;
 use las_noches::camera::Camera;
 use las_noches::geometry::Object;
 use las_noches::image_io::save_png;
-use las_noches::material::{Material, MATERIALS, QUARTZ, STEEL};
+use las_noches::material::{Material, MATERIALS, OBSIDIAN, QUARTZ};
 use las_noches::math::{Mat3, Vec3};
 use las_noches::renderer::Quality;
 use las_noches::scene::{Light, Scene};
@@ -18,13 +18,13 @@ pub fn run(assets: &Path, out: &Path) {
     let tex = |p: &str| Texture::load(&assets.join(p)).expect("falta textura de diagnóstico");
     let checker_m = Material { name: "Tablero", texture: "checker", albedo: 0.9, ..MATERIALS[0] };
     let uv_m = Material { name: "UV", texture: "uvtest", albedo: 0.9, specular: 0.0, ..MATERIALS[0] };
-    // 0 tablero, 1 uv, 2 cuarzo, 3 acero
-    let materials = vec![checker_m, uv_m, MATERIALS[QUARTZ as usize], MATERIALS[STEEL as usize]];
+    // 0 tablero, 1 uv, 2 cuarzo, 3 espejo (obsidiana muy reflectiva)
+    let materials = vec![checker_m, uv_m, MATERIALS[QUARTZ as usize], Material { reflectivity: 0.85, albedo: 0.1, ..MATERIALS[OBSIDIAN as usize] }];
     let textures = vec![
         tex("diag/checker.bmp"),
         tex("diag/uvtest.bmp"),
         tex("textures/quartz.bmp"),
-        tex("textures/steel.bmp"),
+        tex("textures/obsidian.bmp"),
     ];
     let mut o = Vec::new();
     // Piso y pared de fondo con tablero.
@@ -43,7 +43,7 @@ pub fn run(assets: &Path, out: &Path) {
         Object::cube(c2 - Vec3::splat(1.3), c2 + Vec3::splat(1.3), 2)
             .rotated(Mat3::rot_y(0.6).mul(&Mat3::rot_x(0.5)), c2),
     );
-    // D: espejo de acero (reflexión del tablero y del cielo).
+    // D: espejo de obsidiana (reflexión del tablero y del cielo).
     let c3 = Vec3::new(8.0, 2.5, -1.5);
     o.push(
         Object::cube(Vec3::new(6.5, 0.0, -1.7), Vec3::new(9.5, 5.0, -1.3), 3).rotated(Mat3::rot_y(-0.7).mul(&Mat3::rot_x(-0.45)), c3),

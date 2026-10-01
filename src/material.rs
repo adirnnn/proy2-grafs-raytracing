@@ -58,63 +58,52 @@ pub const SAND: u16 = 0;
 pub const STONE: u16 = 1;
 pub const QUARTZ: u16 = 2;
 pub const OBSIDIAN: u16 = 3;
-pub const STEEL: u16 = 4;
+pub const MARBLE: u16 = 4;
 pub const FAKE_SKY: u16 = 5;
-pub const BONE: u16 = 6;
-pub const BASALT: u16 = 7;
-pub const HILT: u16 = 8;
+pub const BASALT: u16 = 6;
 
-pub const MATERIALS: [Material; 9] = [
-    // 1. Arena blanca de Hueco Mundo: mate, casi sin brillo.
-    Material { albedo: 0.85, specular: 0.04, shininess: 8.0, ..Material::base("Arena de Hueco Mundo", "sand") },
-    // 2. Piedra/yeso de Las Noches: satinado, un poco de reflejo.
+pub const MATERIALS: [Material; 7] = [
+    // 1. Arena de Hueco Mundo: blanca grisácea, mate, sin reflejo.
+    Material { albedo: 0.66, specular: 0.04, shininess: 8.0, ..Material::base("Arena de Hueco Mundo", "sand") },
+    // 2. Concreto blanco de Las Noches: satinado, reflejo mínimo.
     Material {
-        albedo: 0.82,
-        specular: 0.25,
-        shininess: 40.0,
-        reflectivity: 0.06,
+        albedo: 0.72,
+        specular: 0.18,
+        shininess: 30.0,
+        reflectivity: 0.04,
         uv_scale: 0.5,
-        ..Material::base("Piedra de Las Noches", "stone")
+        ..Material::base("Concreto de Las Noches", "stone")
     },
-    // 3. Cuarzo de los árboles de cristal: transparente y refractivo.
+    // 3. Cuarzo de los árboles muertos: translúcido y refractivo.
     Material {
-        albedo: 0.10,
-        specular: 0.9,
-        shininess: 220.0,
-        transparency: 0.82,
+        albedo: 0.22,
+        specular: 0.8,
+        shininess: 180.0,
+        transparency: 0.70,
         reflectivity: 0.06,
         ior: 1.54,
-        transmit_tint: Vec3::new(0.86, 0.96, 1.0),
+        transmit_tint: Vec3::new(0.94, 0.97, 1.0),
         ..Material::base("Cuarzo", "quartz")
     },
-    // 4. Obsidiana pulida de la plaza: espejo oscuro.
-    Material {
-        albedo: 0.20,
-        specular: 0.9,
-        shininess: 300.0,
-        reflectivity: 0.55,
-        ..Material::base("Obsidiana", "obsidian")
-    },
-    // 5. Acero de la espada: metálico, muy reflectivo.
+    // 4. Obsidiana pulida de los monolitos: espejo oscuro.
     Material {
         albedo: 0.18,
-        specular: 1.0,
-        shininess: 500.0,
-        reflectivity: 0.78,
-        ..Material::base("Acero de Zangetsu", "steel")
+        specular: 0.9,
+        shininess: 300.0,
+        reflectivity: 0.60,
+        ..Material::base("Obsidiana", "obsidian")
+    },
+    // 5. Mármol pulido del salón del trono: blanco con vetas, refleja el cielo falso.
+    Material {
+        albedo: 0.62,
+        specular: 0.7,
+        shininess: 160.0,
+        reflectivity: 0.35,
+        uv_scale: 0.5,
+        ..Material::base("Mármol pulido", "marble")
     },
     // Extra: interior de la cúpula ("cielo falso" de Las Noches), emisivo.
-    Material { albedo: 0.35, emission: 1.1, ..Material::base("Cielo falso", "fake_sky") },
-    // Extra: hueso de la máscara Hollow.
-    Material {
-        albedo: 0.85,
-        specular: 0.4,
-        shininess: 60.0,
-        reflectivity: 0.04,
-        ..Material::base("Hueso Hollow", "bone")
-    },
+    Material { albedo: 0.35, emission: 1.0, uv_scale: 0.125, ..Material::base("Cielo falso", "fake_sky") },
     // Extra: basalto del zócalo del diorama.
-    Material { albedo: 0.7, specular: 0.15, shininess: 20.0, ..Material::base("Basalto", "basalt") },
-    // Extra: vendaje del mango de la espada.
-    Material { albedo: 0.8, specular: 0.05, shininess: 10.0, ..Material::base("Vendaje", "hilt") },
+    Material { albedo: 0.6, specular: 0.15, shininess: 20.0, ..Material::base("Basalto", "basalt") },
 ];

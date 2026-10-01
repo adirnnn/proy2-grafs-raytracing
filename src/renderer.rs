@@ -8,7 +8,7 @@ use crate::camera::Camera;
 use crate::geometry::Ray;
 use crate::material::Material;
 use crate::math::{Mat3, Rng, Vec3};
-use crate::scene::{Light, Scene};
+use crate::scene::{Light, Scene, PIVOT};
 use std::sync::atomic::{AtomicUsize, Ordering};
 
 /// Desplazamiento para evitar auto-intersección ("acné" de sombras).
@@ -127,7 +127,8 @@ impl<'a> Tracer<'a> {
                 }
             };
             let ndl = n.dot(l_dir);
-            if ndl <= 0.0 {
+            // Sin aporte visible (de espaldas o una luz puntual muy lejana): no lanzamos sombra.
+            if ndl <= 0.0 || l_color.max_component() < 0.01 {
                 continue;
             }
             let vis = self.transmittance(p_out, l_dir, l_dist);
@@ -201,7 +202,8 @@ impl<'a> Tracer<'a> {
             let (jx, jy) = if si == 0 { (0.5, 0.5) } else { (rng.next_f32(), rng.next_f32()) };
             let wr = self.view.camera.ray(&self.view.basis, x as f32 + jx, y as f32 + jy, w as f32, h as f32);
             // Llevamos el rayo al espacio del diorama (rotación del diorama).
-            let r = Ray { origin: self.view.inv.apply(wr.origin), dir: self.view.inv.apply(wr.dir) };
+            // (El diorama gira alrededor de PIVOT, el centro de Las Noches.)
+            let r = Ray { origin: self.view.inv.apply(wr.origin - PIVOT) + PIVOT, dir: self.view.inv.apply(wr.dir) };
             acc += self.trace(&r, 0, 1.0, &mut rng);
         }
         acc / spp as f32

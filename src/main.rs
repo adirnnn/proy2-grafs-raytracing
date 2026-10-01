@@ -21,9 +21,9 @@ use std::time::Instant;
 pub const EXPOSURE: f32 = 1.35;
 
 /// Vista "héroe": 3/4, ligeramente baja, mirando la torre y la luna a través del bosque.
-pub const HERO_YAW_DEG: f32 = -22.0;
+pub const HERO_YAW_DEG: f32 = -8.0;
 pub fn hero_camera() -> Camera {
-    Camera { target: Vec3::new(0.0, 7.0, -1.0), pitch: 0.19, distance: 33.0, fov_deg: 45.0 }
+    Camera { target: Vec3::new(0.0, 11.5, -4.0), pitch: 0.09, distance: 56.0, fov_deg: 45.0 }
 }
 
 pub struct Args {
@@ -86,7 +86,9 @@ fn main() {
     if let Some(t) = args.get("--target") {
         let v: Vec<f32> = t.split(',').filter_map(|x| x.parse().ok()).collect();
         if v.len() == 3 {
-            cam.target = Vec3::new(v[0], v[1], v[2]);
+            // Coordenadas del diorama: se giran junto con él.
+            let p = las_noches::scene::PIVOT;
+            cam.target = las_noches::math::Mat3::rot_y(yaw_deg_arg(&args).to_radians()).apply(Vec3::new(v[0], v[1], v[2]) - p) + p;
             cam.distance = args.num("--dist", cam.distance); // sin límite mínimo en renders fijos
         }
     }
@@ -114,6 +116,10 @@ fn main() {
         #[cfg(not(windows))]
         eprintln!("La ventana interactiva usa la API de Windows; en otros sistemas usa --render.");
     }
+}
+
+fn yaw_deg_arg(a: &Args) -> f32 {
+    a.num("--yaw", HERO_YAW_DEG)
 }
 
 fn args_to_video(a: &Args) -> video::VideoSettings {

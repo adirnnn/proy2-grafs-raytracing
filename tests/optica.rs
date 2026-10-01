@@ -121,7 +121,9 @@ fn escena_dentro_de_limites() {
     }
     println!("objetos: {}  cubos: {}  límites: {:?} .. {:?}", objs.len(), cubes, hmin, hmax);
     // La distancia mínima de zoom deja la cámara fuera de todo el diorama
-    // (+1 porque el objetivo de la cámara está desplazado 1 unidad del centro).
-    let r = (hmax.x.abs().max(hmin.x.abs()).powi(2) + hmax.z.abs().max(hmin.z.abs()).powi(2)).sqrt();
-    assert!(r + 1.0 < las_noches::camera::MIN_DISTANCE, "radio horizontal {r}");
+    // (la cámara interactiva mira siempre a un punto sobre el pivote).
+    // Radio horizontal máximo medido desde el pivote de rotación.
+    let p = las_noches::scene::PIVOT;
+    let r = ((hmax.x - p.x).abs().max((hmin.x - p.x).abs()).powi(2) + (hmax.z - p.z).abs().max((hmin.z - p.z).abs()).powi(2)).sqrt();
+    assert!(r < las_noches::camera::MIN_DISTANCE, "radio horizontal {r}");
 }

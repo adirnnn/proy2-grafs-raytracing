@@ -16,6 +16,20 @@ Todo está hecho con un raytracer escrito desde cero en **Rust, usando únicamen
 
 ![Vista previa animada](docs/img/preview.gif)
 
+**Recorrido del video:**
+
+| Segundos | Qué muestra |
+|---|---|
+| 0–4 | Vista héroe y acercamiento lento |
+| 4–19 | Rotación completa del diorama (360°) |
+| 19–27 | Acercamiento a Zangetsu: la Garganta roja reflejada en el acero |
+| 27–36 | La cúpula abierta: el cielo falso reflejado en la plaza de obsidiana |
+| 36–45 | Bosque de cuarzo: refracción de la cúpula y del cielo |
+| 45–54 | Alejamiento: el diorama completo contra el skybox |
+| 54–60 | Regreso a la vista héroe |
+
+El video se genera con `--video` a 1280×720, 8 muestras por píxel y 30 fps. Es determinista.
+
 ---
 
 ## Cómo ejecutar
@@ -67,10 +81,10 @@ La **rotación es del diorama**, no una órbita de la cámara: los rayos se tran
 |---|---:|---|---|
 | Complejidad de la escena | 30 | `src/scene.rs`: **975 cubos** texturizados (terreno por columnas, cúpula de bloques con corte, torres, 6 árboles de cuarzo, 7 racimos de cristal, ruinas, espada) + 1 esfera | Imágenes de abajo y video |
 | Atractivo visual | 20 | Dirección de arte propia: silueta torre + luna, paleta monocromática fría con acentos cian (cielo falso) y rojo (Garganta) | `docs/img/hero.png`, `docs/img/angulos.png` |
-| Rotación del diorama y zoom | 20 | `src/window.rs` (entrada y refinamiento), `src/renderer.rs::View` (rotación), `src/camera.rs` (zoom por distancia) | Ventana interactiva; `docs/img/zoom.png`; video 4–19 s (360°) y 45–58 s (zoom) |
+| Rotación del diorama y zoom | 20 | `src/window.rs` (entrada y refinamiento), `src/renderer.rs::View` (rotación), `src/camera.rs` (zoom por distancia) | Ventana interactiva; `docs/img/zoom.png`; video: 4–19 s rotación de 360°, 19–27 s acercamiento, 45–54 s alejamiento |
 | 5 materiales (textura + albedo, especular, transparencia, reflectividad) | 25 | `src/material.rs`, texturas en `assets/textures/` | [Tabla de materiales](#materiales) |
-| Refracción con sentido | 10 | Árboles y cristales de **cuarzo** (IOR 1.54) con Snell, Fresnel y reflexión interna total | `docs/img/mat_cuarzo.png`, `docs/img/diag_frente.png`, video 40–45 s |
-| Reflexión | 5 | **Acero** de Zangetsu (0.78) y **obsidiana** de la plaza (0.55) | `docs/img/mat_acero.png`, `docs/img/mat_obsidiana.png` |
+| Refracción con sentido | 10 | Árboles y cristales de **cuarzo** (IOR 1.54) con Snell, Fresnel y reflexión interna total | `docs/img/mat_cuarzo.png`, `docs/img/diag_frente.png`, video 36–45 s |
+| Reflexión | 5 | **Acero** de Zangetsu (0.78) y **obsidiana** de la plaza (0.55) | `docs/img/mat_acero.png`, `docs/img/mat_obsidiana.png`, video 19–36 s |
 | Skybox | 20 | Cubemap de 6 caras BMP (`assets/skybox/`), muestreado por **todos** los rayos que no chocan (primarios, reflejados y refractados) | Luna, estrellas y Garganta en `docs/img/hero.png`; la Garganta solo aparece reflejada en la espada |
 
 ## Materiales
@@ -196,6 +210,7 @@ En la ventana (calidad 2), mientras se mueve se renderiza a 426×240 y luego se 
   - No hay iluminación global ni cáusticas.
   - La luz que atraviesa el cuarzo se aproxima con sombras tintadas.
   - El brillo del "cielo falso" se ilumina con una luz puntual, no con el material emisivo.
+- Cuando se acaba la profundidad de recursión (o el aporte baja del 1%), el último rayo reflejado o refractado toma el color del skybox en vez de seguir trazando. En calidad 1 (2 rebotes) esto se nota en los cristales.
 - Después de moverse, el primer cuadro a resolución completa tarda unos cientos de milisegundos en esta CPU, porque todo se calcula en el procesador.
 - El PNG que escribe el proyecto usa deflate sin compresión, así que los archivos son más grandes que un PNG normal.
 

@@ -66,146 +66,142 @@ fn px16(x: usize, y: usize) -> (i32, i32) {
 }
 
 fn gen_block_textures() {
-    // 1. Arena: píxeles lógicos en tonos hueso con granos y ondas suaves.
+    // 1. Arena: blanca grisácea, granos y pequeñas piedras (pixel art 16x16 por bloque).
     make("sand", |u, v, x, y| {
         let (px, py) = px16(x, y);
         let n = h01(px, py, 1);
-        let ripple = ((v * 3.0 + fbm(u, v, 2, 2, 5) * 0.6) * std::f32::consts::TAU).sin() * 0.5 + 0.5;
-        let base = Vec3::new(0.84, 0.76, 0.62) * (0.90 + 0.10 * n - 0.06 * ripple);
-        if n > 0.93 { Vec3::new(0.66, 0.64, 0.66) } else { base }
+        let soft = fbm(u, v, 4, 3, 5);
+        let base = Vec3::new(0.80, 0.80, 0.79) * (0.88 + 0.10 * n + 0.06 * soft);
+        if n > 0.94 {
+            Vec3::new(0.55, 0.56, 0.57)
+        } else if n < 0.05 {
+            Vec3::new(0.93, 0.93, 0.92)
+        } else {
+            base
+        }
     });
-    // 2. Piedra de Las Noches: bloques de yeso blanco con juntas y vetas verticales.
+    // 2. Concreto de Las Noches: gris blanco, poros, líneas de vaciado y juntas de bloque.
     make("stone", |u, v, x, y| {
-        let (px, py) = px16(x, y);
-        let seam = x < 3 || y < 3 || (y > TEX / 2 - 2 && y < TEX / 2 + 1 && px < 16);
-        let offset = if py >= 8 { 8 } else { 0 };
-        let brick_seam = (px + offset) % 16 == 0 && x % 8 < 2;
-        let n = fbm(u, v, 4, 3, 2);
-        let streak = fbm(u * 0.5, v * 0.05, 8, 2, 9);
-        let c = Vec3::new(0.90, 0.89, 0.86) * (0.86 + 0.12 * n + 0.05 * streak);
-        if seam || brick_seam { c * 0.72 } else { c }
+        let n = fbm(u, v, 4, 4, 2);
+        let pores = h01((u * 64.0) as i32, (v * 64.0) as i32, 3);
+        let pour = ((v * 4.0).fract() < 0.025) as i32 as f32;
+        let seam = x < 2 || y < 2;
+        let mut c = Vec3::new(0.80, 0.79, 0.76) * (0.82 + 0.16 * n);
+        if pores > 0.97 {
+            c = c * 0.6;
+        }
+        c = c * (1.0 - 0.18 * pour);
+        if seam { c * 0.78 } else { c }
     });
-    // 3. Cuarzo: blanco-cian con facetas diagonales y bordes brillantes.
+    // 3. Cuarzo: blanco pálido lechoso con vetas longitudinales y bordes brillantes.
     make("quartz", |u, v, _, _| {
-        let facet = ((u + v * 0.6) * 5.0 + fbm(u, v, 2, 2, 3) * 1.5).fract();
-        let band = smoothstep(0.0, 0.08, facet) * (1.0 - smoothstep(0.85, 1.0, facet));
-        let edge = 1.0 - smoothstep(0.0, 0.06, u.min(1.0 - u).min(v).min(1.0 - v));
-        let c = Vec3::new(0.80, 0.94, 1.0) * (0.85 + 0.15 * band);
-        c.lerp(Vec3::ONE, edge * 0.8)
+        let streak = fbm(u * 6.0, v * 0.5, 2, 3, 3);
+        let edge = 1.0 - smoothstep(0.0, 0.08, u.min(1.0 - u).min(v).min(1.0 - v));
+        let c = Vec3::new(0.86, 0.89, 0.90) * (0.80 + 0.22 * streak);
+        c.lerp(Vec3::ONE, edge * 0.6)
     });
-    // 4. Obsidiana: negro violáceo con vetas brillantes.
+    // 4. Obsidiana: negro verdoso (como los bloques oscuros de la referencia) con vetas.
     make("obsidian", |u, v, _, _| {
         let n = fbm(u, v, 3, 4, 4);
-        let vein = 1.0 - smoothstep(0.0, 0.035, (n - 0.5).abs());
-        let base = Vec3::new(0.05, 0.04, 0.08) * (0.8 + 0.4 * fbm(u, v, 8, 2, 8));
-        base.lerp(Vec3::new(0.42, 0.30, 0.62), vein * 0.8)
+        let vein = 1.0 - smoothstep(0.0, 0.03, (n - 0.5).abs());
+        let base = Vec3::new(0.06, 0.10, 0.10) * (0.8 + 0.4 * fbm(u, v, 8, 2, 8));
+        base.lerp(Vec3::new(0.30, 0.45, 0.45), vein * 0.7)
     });
-    // 5. Acero cepillado: vetas horizontales finas, un poco azulado.
-    make("steel", |u, v, _, _| {
-        let brush = fbm(u * 0.25, v * 8.0, 4, 3, 6);
-        let fine = h01((u * 4.0 * TEX as f32) as i32 / 8, (v * TEX as f32) as i32, 12);
-        Vec3::new(0.72, 0.75, 0.80) * (0.82 + 0.14 * brush + 0.05 * fine)
+    // 5. Mármol pulido: blanco con vetas grises suaves y losas grandes.
+    make("marble", |u, v, x, y| {
+        let warp = fbm(u, v, 2, 4, 61);
+        let vein = 1.0 - smoothstep(0.0, 0.05, ((u + v * 0.7 + warp * 1.4) * 3.0).fract().min(1.0 - ((u + v * 0.7 + warp * 1.4) * 3.0).fract()));
+        let seam = x < 1 || y < 1;
+        let c = Vec3::new(0.93, 0.93, 0.92).lerp(Vec3::new(0.55, 0.57, 0.60), vein * 0.6);
+        if seam { c * 0.7 } else { c }
     });
     // 6. Cielo falso: azul diurno con nubes (interior de la cúpula).
     make("fake_sky", |u, v, _, _| {
         let cloud = smoothstep(0.52, 0.72, fbm(u, v, 2, 5, 21));
-        let sky = Vec3::new(0.38, 0.62, 0.95).lerp(Vec3::new(0.62, 0.80, 1.0), v);
+        let sky = Vec3::new(0.36, 0.60, 0.95).lerp(Vec3::new(0.60, 0.80, 1.0), v);
         sky.lerp(Vec3::new(0.97, 0.98, 1.0), cloud)
     });
-    // 7. Hueso: blanco cálido, grietas y marcas rojas de máscara Hollow.
-    make("bone", |u, v, _, _| {
-        let n = fbm(u, v, 4, 4, 30);
-        let crack = 1.0 - smoothstep(0.0, 0.02, (fbm(u, v, 3, 3, 33) - 0.5).abs());
-        let mut c = Vec3::new(0.93, 0.90, 0.84) * (0.9 + 0.1 * n);
-        c = c.lerp(Vec3::new(0.45, 0.40, 0.36), crack * 0.7);
-        // Tres franjas rojas verticales en el "frente" de la máscara.
-        for s in [0.40f32, 0.5, 0.60] {
-            let d = (u - s).abs();
-            if d < 0.018 && v > 0.35 && v < 0.85 {
-                c = Vec3::new(0.72, 0.05, 0.07);
-            }
-        }
-        c
-    });
-    // 8. Basalto: gris azulado oscuro, rugoso y pixelado.
+    // 7. Basalto: gris oscuro, rugoso y pixelado.
     make("basalt", |u, v, x, y| {
         let (px, py) = px16(x, y);
         let n = h01(px, py, 40) * 0.5 + fbm(u, v, 4, 3, 41) * 0.5;
         let seam = x < 2 || y < 2;
-        let c = Vec3::new(0.20, 0.21, 0.26) * (0.75 + 0.5 * n);
+        let c = Vec3::new(0.17, 0.18, 0.19) * (0.75 + 0.5 * n);
         if seam { c * 0.6 } else { c }
-    });
-    // 9. Vendaje del mango: tela blanca en diagonal con separaciones oscuras.
-    make("hilt", |u, v, _, _| {
-        let d = ((u + v) * 4.0).fract();
-        let gap = smoothstep(0.0, 0.08, d) * (1.0 - smoothstep(0.9, 1.0, d));
-        Vec3::new(0.88, 0.86, 0.82).lerp(Vec3::new(0.12, 0.10, 0.10), 1.0 - gap)
     });
 }
 
-/// Cielo nocturno de Hueco Mundo: degradado índigo, estrellas, luna creciente enorme
-/// y una grieta roja (Garganta) como acento. `d` normalizada, en el mundo.
+/// Cielo de Hueco Mundo: noche eterna con nubes de tormenta gris oscuro, luna creciente
+/// delgada (casi un anillo) con destello, pocas estrellas entre las nubes, y la Garganta
+/// roja detrás del espectador. `d` normalizada, en el mundo.
 fn sky_color(d: Vec3) -> Vec3 {
     let up = d.y;
-    let zenith = Vec3::new(0.008, 0.010, 0.030);
-    let horizon = Vec3::new(0.022, 0.020, 0.050);
+    let m = MOON_DIR.normalized();
+    let to_moon = d.dot(m).clamp(-1.0, 1.0).acos();
+    // Fondo: negro azul verdoso, un poco más claro hacia el horizonte.
+    let zenith = Vec3::new(0.010, 0.013, 0.015);
+    let horizon = Vec3::new(0.050, 0.058, 0.060);
     let mut c = if up >= 0.0 {
-        horizon.lerp(zenith, smoothstep(0.0, 0.6, up))
+        horizon.lerp(zenith, smoothstep(0.0, 0.5, up))
     } else {
-        // Bajo el horizonte: desierto lejano muy oscuro con bruma.
-        horizon.lerp(Vec3::new(0.030, 0.028, 0.045), smoothstep(0.0, 0.15, -up))
+        horizon.lerp(Vec3::new(0.035, 0.038, 0.040), smoothstep(0.0, 0.15, -up))
     };
-    // Resplandor verde-azulado en el horizonte.
-    c += Vec3::new(0.02, 0.05, 0.06) * (1.0 - smoothstep(0.0, 0.18, up.abs()));
 
-    // Banda tenue tipo vía láctea.
-    let band_axis = Vec3::new(0.3, 0.55, 0.78).normalized();
-    let band = 1.0 - smoothstep(0.0, 0.28, d.dot(band_axis).abs());
-    let neb = fbm_dir(d * 3.0, 50);
-    c += Vec3::new(0.05, 0.04, 0.09) * band * neb;
-
-    // Estrellas: celdas en una rejilla sobre la dirección.
-    if up > -0.05 {
+    // Estrellas tenues (antes de las nubes, que las tapan).
+    if up > 0.0 {
         let s = d * 420.0;
-        let (ix, iy, iz) = (s.x.floor() as i32, s.y.floor() as i32, s.z.floor() as i32);
-        let hh = hash_u32((ix as u32).wrapping_mul(73_856_093) ^ (iy as u32).wrapping_mul(19_349_663) ^ (iz as u32).wrapping_mul(83_492_791));
-        let r = (hh & 0xFFFF) as f32 / 65535.0;
-        if r > 0.9965 {
-            let b = ((hh >> 16) & 0xFF) as f32 / 255.0;
-            let tint = if b > 0.7 { Vec3::new(0.8, 0.85, 1.0) } else { Vec3::new(1.0, 0.95, 0.85) };
-            c += tint * (0.15 + 0.55 * b * b) * (1.0 + band);
+        let hh = hash_u32((s.x.floor() as i32 as u32).wrapping_mul(73_856_093) ^ (s.y.floor() as i32 as u32).wrapping_mul(19_349_663) ^ (s.z.floor() as i32 as u32).wrapping_mul(83_492_791));
+        if (hh & 0xFFFF) as f32 / 65535.0 > 0.997 {
+            c += Vec3::new(0.85, 0.9, 1.0) * (0.12 + 0.3 * ((hh >> 16) & 0xFF) as f32 / 255.0);
         }
     }
 
-    // Luna creciente.
-    let m = MOON_DIR.normalized();
-    let ang = d.dot(m).clamp(-1.0, 1.0).acos();
-    let radius = 0.115;
-    // Halo.
-    c += Vec3::new(0.25, 0.30, 0.42) * (0.18 * (-ang / 0.25).exp() + 0.05 * (-ang / 0.8).exp());
-    if ang < radius * 1.02 {
-        // "Sombra" de la creciente: un disco desplazado que tapa parte de la luna.
-        let right = m.cross(Vec3::new(0.0, 1.0, 0.0)).normalized();
-        let shadow_c = (m + right * (radius * 0.55) + Vec3::new(0.0, radius * 0.25, 0.0)).normalized();
-        let a2 = d.dot(shadow_c).clamp(-1.0, 1.0).acos();
-        let lit = smoothstep(radius * 0.93, radius * 1.02, a2) * (1.0 - smoothstep(radius * 0.97, radius * 1.02, ang));
-        let maria = fbm_dir(d * 40.0, 70);
-        let moon = Vec3::new(0.98, 0.97, 0.92) * (0.82 + 0.18 * maria);
-        c = c.lerp(moon, lit);
+    // Nubes de tormenta: capas de ruido sobre la dirección proyectada.
+    if up > -0.05 {
+        let q = Vec3::new(d.x, 0.0, d.z) / (up.max(0.0) + 0.25);
+        let n1 = fbm_dir(q * 1.6 + Vec3::new(3.0, 0.0, 1.0), 50);
+        let n2 = fbm_dir(q * 4.0, 51);
+        let density = smoothstep(0.38, 0.75, n1 * 0.75 + n2 * 0.25);
+        // Las nubes se iluminan cerca de la luna.
+        let lit = 0.035 + 0.22 * (-to_moon / 0.35).exp() + 0.05 * (1.0 - smoothstep(0.0, 0.4, up));
+        let cloud = Vec3::new(0.85, 0.92, 0.95) * lit * (0.6 + 0.6 * n2);
+        c = c.lerp(cloud, density * (1.0 - smoothstep(0.85, 1.0, up)));
     }
 
-    // Garganta: grieta roja irregular.
-    // Detrás del espectador: solo se ve reflejada en el acero y la obsidiana.
+    // Halo de la luna.
+    c += Vec3::new(0.55, 0.62, 0.68) * (0.25 * (-to_moon / 0.08).exp() + 0.06 * (-to_moon / 0.3).exp());
+    // Destello en cruz (como en la referencia).
+    let right = m.cross(Vec3::new(0.0, 1.0, 0.0)).normalized();
+    let upv = right.cross(m);
+    let (lx, ly) = (d.dot(right), d.dot(upv));
+    if d.dot(m) > 0.95 {
+        let star = (-lx.abs() / 0.003).exp() * (-ly.abs() / 0.05).exp() + (-ly.abs() / 0.003).exp() * (-lx.abs() / 0.05).exp();
+        c += Vec3::splat(0.9) * star * 0.35;
+    }
+    // Luna creciente delgada: disco brillante menos un disco casi del mismo tamaño
+    // desplazado; queda un anillo fino más grueso abajo a la izquierda.
+    let radius = 0.05;
+    if to_moon < radius * 1.05 {
+        let shadow_c = (m + right * (radius * 0.18) + upv * (radius * 0.22)).normalized();
+        let a2 = d.dot(shadow_c).clamp(-1.0, 1.0).acos();
+        let disc = 1.0 - smoothstep(radius * 0.97, radius * 1.02, to_moon);
+        let lit = disc * smoothstep(radius * 0.80, radius * 0.86, a2);
+        // Interior oscuro (la parte en sombra de la luna).
+        c = c.lerp(Vec3::new(0.03, 0.035, 0.04), disc * (1.0 - lit) * 0.85);
+        c = c.lerp(Vec3::new(1.0, 1.0, 0.98), lit);
+    }
+
+    // Garganta: grieta roja irregular (detrás del espectador).
     let g_center = GARGANTA_DIR.normalized();
     let g_right = g_center.cross(Vec3::new(0.0, 1.0, 0.0)).normalized();
     let g_up = g_right.cross(g_center);
-    let (lx, ly) = (d.dot(g_right), d.dot(g_up));
-    if d.dot(g_center) > 0.85 && lx.abs() < 0.24 {
-        let jag = (lx * 60.0).sin() * 0.006 + (lx * 23.0).sin() * 0.01;
-        let width = 0.02 * (1.0 - (lx / 0.24).powi(2));
-        let dist = (ly - jag - lx * 0.35).abs();
+    let (gx, gy) = (d.dot(g_right), d.dot(g_up));
+    if d.dot(g_center) > 0.85 && gx.abs() < 0.24 {
+        let jag = (gx * 60.0).sin() * 0.006 + (gx * 23.0).sin() * 0.01;
+        let width = 0.02 * (1.0 - (gx / 0.24).powi(2));
+        let dist = (gy - jag - gx * 0.35).abs();
         let core = 1.0 - smoothstep(width * 0.3, width, dist);
-        let glow = (-dist / 0.04).exp() * (1.0 - (lx / 0.24).powi(2));
+        let glow = (-dist / 0.04).exp() * (1.0 - (gx / 0.24).powi(2));
         c += Vec3::new(0.95, 0.10, 0.12) * glow * 0.6;
         c = c.lerp(Vec3::new(0.02, 0.0, 0.01), core);
     }
