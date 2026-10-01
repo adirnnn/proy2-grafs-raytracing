@@ -4,8 +4,9 @@
 //! cúpula baja, seis torres cilíndricas con base acampanada, desierto blanco, árboles
 //! muertos de cuarzo y una luna creciente bajo un cielo nublado.
 //!
-//! Unidades: 1 unidad = 1 bloque. Y hacia arriba. El diorama ocupa x,z en [-24.9, 24.9]
-//! sobre un zócalo de basalto; la cara superior del zócalo está en y = 0.
+//! Escala: 1 unidad ≈ 4 m. Y hacia arriba. El suelo del desierto está en y = 1 y se
+//! extiende hasta perderse en la niebla (no hay bordes visibles). La fortaleza mide
+//! ~85 m de diámetro y sus torres llegan a ~115 m; Zangetsu mide ~2 m (0.53 u).
 
 use crate::bvh::Bvh;
 use crate::geometry::Object;
@@ -20,7 +21,7 @@ use std::path::Path;
 pub enum Light {
     /// `dir` apunta HACIA la luz. `spread` = tamaño angular aproximado (sombras suaves).
     Directional { dir: Vec3, color: Vec3, spread: f32 },
-    /// Luz puntual con caída suave a partir de `radius`.
+    /// Luz puntual con caída suave a partir de `radius` (alcance máximo 6·radius).
     Point { pos: Vec3, color: Vec3, radius: f32 },
 }
 
@@ -34,13 +35,19 @@ pub struct Scene {
     pub lights: Vec<Light>,
     pub ambient_sky: Vec3,
     pub ambient_ground: Vec3,
+    /// Densidad de la niebla por unidad de distancia (0 = sin niebla).
+    pub fog_density: f32,
 }
 
 /// Dirección (en el mundo) hacia la luna dibujada en el skybox.
 /// El generador de texturas usa la misma constante para pintar la luna ahí.
-pub const MOON_DIR: Vec3 = Vec3::new(0.02, 0.21, -0.98);
+pub const MOON_DIR: Vec3 = Vec3::new(0.02, 0.36, -0.93);
 /// Dirección de la Garganta (grieta roja) en el cielo: detrás de la cámara.
 pub const GARGANTA_DIR: Vec3 = Vec3::new(0.18, 0.24, 0.95);
+/// Eje vertical alrededor del cual gira el diorama (centro de Las Noches).
+pub const PIVOT: Vec3 = Vec3::new(0.0, 0.0, -4.0);
+/// Altura del suelo plano del desierto.
+pub const GROUND_Y: f32 = 1.0;
 
 impl Scene {
     /// Luz ambiente hemisférica: cielo nocturno arriba, rebote de la arena abajo.
@@ -58,17 +65,22 @@ impl Scene {
         let skybox = Skybox::load(&assets.join("skybox"))?;
         let objects = build_diorama();
         let bvh = Bvh::build(&objects);
+        let gate = Vec3::new(DOME_C.x, 3.2, DOME_C.z + DRUM_R + 3.2);
         let lights = vec![
-            // Luz principal: el resplandor lunar difuso de las nubes, desde adelante-izquierda.
+            // Resplandor lunar difuso de las nubes: luz principal tenue, sombras suaves.
             Light::Directional {
-                dir: Vec3::new(-0.50, 0.70, 0.52).normalized(),
-                color: Vec3::new(0.86, 0.90, 1.0) * 1.15,
-                spread: 0.045,
+                dir: Vec3::new(-0.45, 0.62, 0.64).normalized(),
+                color: Vec3::new(0.70, 0.76, 0.88) * 0.38,
+                spread: 0.05,
             },
-            // Contraluz de la luna (detrás de Las Noches).
-            Light::Directional { dir: MOON_DIR.normalized(), color: Vec3::new(0.80, 0.88, 1.0) * 1.1, spread: 0.02 },
-            // Luz del "cielo falso" dentro de la cúpula: se escapa por el corte.
-            Light::Point { pos: DOME_C + Vec3::new(0.0, 6.5, 0.0), color: Vec3::new(1.6, 2.1, 2.9), radius: 9.0 },
+            // Contraluz de la luna (detrás de Las Noches): recorta las siluetas.
+            Light::Directional { dir: MOON_DIR.normalized(), color: Vec3::new(0.80, 0.88, 1.0) * 0.9, spread: 0.02 },
+            // Resplandor rojo de la Garganta, que se abre detrás del espectador.
+            Light::Directional { dir: GARGANTA_DIR.normalized(), color: Vec3::new(0.55, 0.05, 0.06) * 0.05, spread: 0.06 },
+            // El "cielo falso" de adentro: se derrama por el corte de la cúpula.
+            Light::Point { pos: DOME_C + Vec3::new(-2.5, 6.0, -2.5), color: Vec3::new(1.7, 2.3, 3.2) * 1.4, radius: 7.0 },
+            // La puerta abierta: luz del interior que cae sobre la calzada.
+            Light::Point { pos: gate, color: Vec3::new(1.5, 2.0, 2.7), radius: 3.5 },
         ];
         Ok(Scene {
             objects,
@@ -77,8 +89,9 @@ impl Scene {
             textures,
             skybox,
             lights,
-            ambient_sky: Vec3::new(0.075, 0.082, 0.092),
-            ambient_ground: Vec3::new(0.060, 0.060, 0.062),
+            ambient_sky: Vec3::new(0.030, 0.034, 0.040),
+            ambient_ground: Vec3::new(0.026, 0.026, 0.028),
+            fog_density: 0.0065,
         })
     }
 }
@@ -87,19 +100,21 @@ impl Scene {
 // Diseño del diorama
 // ----------------------------------------------------------------------------
 
-/// Eje vertical alrededor del cual gira el diorama (centro de Las Noches).
-pub const PIVOT: Vec3 = Vec3::new(0.0, 0.0, -4.0);
-
-pub const HALF: i32 = 24; // celdas de -24..=24 (49x49 bloques)
+/// Celdas de terreno con dunas: de -HALF a HALF (el resto es el suelo plano infinito).
+pub const HALF: i32 = 44;
 /// Centro de Las Noches (base del tambor).
 pub const DOME_C: Vec3 = Vec3::new(0.0, 1.0, -4.0);
 /// Radio exterior del tambor, altura del tambor y altura extra de la cúpula.
 const DRUM_R: f32 = 10.5;
 const DRUM_H: f32 = 8.0;
 const DOME_H: f32 = 4.5;
+/// Tamaño de celda de la arquitectura (cuarto de bloque: curvas suaves).
+const CS: f32 = 0.25;
 /// Corte de maqueta (ángulo alrededor del centro, 0 = +z, 90° = +x): deja ver el interior.
 const CUT_FROM: f32 = 180.0;
 const CUT_TO: f32 = 255.0;
+/// Calzada de obsidiana: de la puerta hacia el frente, con este medio ancho.
+const CAUSEWAY_HALF_W: f32 = 3.0;
 
 fn noise2(x: f32, z: f32, seed: u32) -> f32 {
     let (xi, zi) = (x.floor() as i32, z.floor() as i32);
@@ -128,78 +143,73 @@ fn in_cut(x: f32, z: f32) -> bool {
     a > CUT_FROM && a < CUT_TO
 }
 
-/// Camino de arena aplanada desde la puerta hasta el borde frontal.
-fn on_path(i: i32, j: i32) -> bool {
-    i.abs() <= 2 && j as f32 > DOME_C.z + DRUM_R
-}
-
 fn smooth(t: f32) -> f32 {
     let t = t.clamp(0.0, 1.0);
     t * t * (3.0 - 2.0 * t)
 }
 
-/// Altura de la arena (en bloques) en la celda (i, j).
-pub fn sand_height(i: i32, j: i32) -> i32 {
+fn on_causeway(x: f32, z: f32) -> bool {
+    x.abs() <= CAUSEWAY_HALF_W && z > DOME_C.z + DRUM_R
+}
+
+/// Altura de la arena (múltiplos de medio bloque) en la celda (i, j).
+pub fn sand_height(i: i32, j: i32) -> f32 {
     let (x, z) = (i as f32, j as f32);
-    let n = noise2(x * 0.09, z * 0.09, 7) * 0.65 + noise2(x * 0.22, z * 0.22, 13) * 0.35;
-    // Dunas que suben hacia los bordes y se aplanan cerca de la fortaleza y del camino.
-    // (El frente queda bajo para que se vea el camino hacia la puerta.)
-    let edge = smooth((x.abs().max(-z) - 12.0) / 12.0) + 0.3 * smooth((z - 14.0) / 10.0);
-    let near = smooth((dist_to_center(x, z) - DRUM_R - 2.0) / 7.0);
-    let path = if i.abs() <= 4 && z > DOME_C.z + DRUM_R {
-        0.35 + 0.65 * smooth((i.abs() as f32 - 2.0) / 2.0)
-    } else {
-        1.0
-    };
-    (1.0 + (n * 3.2 + edge * 3.5) * near * path).floor() as i32
+    let n = noise2(x * 0.07, z * 0.07, 7) * 0.65 + noise2(x * 0.19, z * 0.19, 13) * 0.35;
+    let r = dist_to_center(x, z);
+    // Dunas en un anillo alrededor de la fortaleza; planas cerca de ella, cerca de la
+    // calzada y lejos (donde se funden con el suelo infinito bajo la niebla).
+    let near = smooth((r - DRUM_R - 2.0) / 8.0);
+    let far = 1.0 - smooth((r - 26.0) / 14.0);
+    let path = 1.0
+        - (1.0 - smooth((x.abs() - CAUSEWAY_HALF_W - 0.5) / 5.0)) * smooth((z - DOME_C.z - DRUM_R + 2.0) / 3.0);
+    let h = n * 4.5 * near * far * path;
+    GROUND_Y + (h * 2.0).floor() * 0.5
 }
 
 fn cube_at(x: f32, y: f32, z: f32, sx: f32, sy: f32, sz: f32, m: u16) -> Object {
     Object::cube(Vec3::new(x, y, z), Vec3::new(x + sx, y + sy, z + sz), m)
 }
 
-/// Columna de bloques de la celda (i, j) entre las alturas y0 y y1.
-fn column(i: i32, j: i32, y0: f32, y1: f32, m: u16) -> Object {
-    cube_at(i as f32 - 0.5, y0, j as f32 - 0.5, 1.0, y1 - y0, 1.0, m)
-}
-
 pub fn build_diorama() -> Vec<Object> {
     let mut o = Vec::new();
 
-    // Zócalo de basalto con molduras de obsidiana.
-    o.push(cube_at(-24.7, -4.0, -24.7, 49.4, 4.0, 49.4, BASALT));
-    o.push(cube_at(-24.9, -0.8, -24.9, 49.8, 0.4, 49.8, OBSIDIAN).with_uv_scale(0.5));
-    o.push(cube_at(-24.9, -3.9, -24.9, 49.8, 0.3, 49.8, OBSIDIAN).with_uv_scale(0.5));
+    // Suelo del desierto: un cubo enorme (8 km de lado) que se pierde en la niebla.
+    o.push(cube_at(-1000.0, -6.0, -1000.0, 2000.0, 6.0 + GROUND_Y, 2000.0, SAND));
 
-    // Terreno: una columna por celda.
+    // Dunas: una columna por celda donde la arena sube sobre el suelo.
     for i in -HALF..=HALF {
         for j in -HALF..=HALF {
-            let d = dist_to_center(i as f32, j as f32);
-            if d < DRUM_R - 1.0 {
-                // Piso interior: mármol pulido del salón.
-                o.push(column(i, j, 0.0, 1.0, MARBLE));
-            } else {
-                let h = if on_path(i, j) { 1 } else { sand_height(i, j) };
-                o.push(column(i, j, 0.0, h as f32, SAND));
+            let (x, z) = (i as f32, j as f32);
+            if dist_to_center(x, z) < DRUM_R + 0.5 || on_causeway(x, z) {
+                continue;
+            }
+            let h = sand_height(i, j);
+            if h > GROUND_Y {
+                o.push(cube_at(x - 0.5, GROUND_Y - 0.5, z - 0.5, 1.0, h - GROUND_Y + 0.5, 1.0, SAND));
             }
         }
     }
 
     build_las_noches(&mut o);
+    build_causeway(&mut o);
 
     // Seis torres con base acampanada: (x, z, radio, altura).
-    for (x, z, r, h) in [
+    for (k, (x, z, r, h)) in [
         (-11.5, 5.5, 2.6, 27.0),
         (-15.0, -4.5, 2.3, 23.0),
         (-16.5, 3.0, 2.2, 14.0),
         (12.0, 5.0, 2.8, 29.0),
         (9.0, -16.0, 2.3, 25.0),
         (15.0, -7.0, 1.9, 17.0),
-    ] {
-        build_tower(&mut o, x, z, r, h);
+    ]
+    .iter()
+    .enumerate()
+    {
+        build_tower(&mut o, *x, *z, *r, *h, k as u32);
     }
 
-    // Árboles muertos de cuarzo, escasos y delgados.
+    // Árboles muertos de cuarzo, dispersos (algunos lejos, entre la niebla).
     for (k, (x, z, s)) in [
         (-14.0, 15.5, 1.7),
         (-21.0, 7.0, 1.0),
@@ -209,6 +219,11 @@ pub fn build_diorama() -> Vec<Object> {
         (-21.0, -10.0, 0.95),
         (5.0, -21.5, 0.9),
         (12.5, 18.0, 1.35),
+        (-30.0, 24.0, 1.2),
+        (33.0, 20.0, 1.4),
+        (-36.0, -8.0, 1.1),
+        (28.0, -26.0, 1.3),
+        (-9.0, 36.0, 0.9),
     ]
     .iter()
     .enumerate()
@@ -216,36 +231,53 @@ pub fn build_diorama() -> Vec<Object> {
         build_dead_tree(&mut o, Vec3::new(*x, 0.0, *z), k as u32 + 1, *s);
     }
 
-    // Lápidas de concreto junto al camino.
-    for (x, z, h) in [(-4.0, 14.0, 3.4f32), (4.5, 11.0, 3.0), (-5.0, 21.0, 2.2)] {
-        let g = sand_height(x as i32, z as i32) as f32;
+    // Lápidas de concreto junto a la calzada.
+    for (x, z, h) in [(-5.0, 14.0, 3.4f32), (5.5, 11.0, 3.0), (-5.5, 22.0, 2.2), (6.0, 27.0, 2.6), (-5.5, 33.0, 1.8)] {
+        let g = sand_height(x as i32, z as i32);
         o.push(cube_at(x - 0.4, g - 0.5, z - 0.3, 0.8, h + 0.5, 0.6, STONE));
     }
-    // Monolitos de obsidiana pulida dispersos en el desierto: (x, z, tamaño, giro, inclinación).
-    // Inclinados hacia atrás para que reflejen el cielo oscuro (y la Garganta) y no la arena.
+    // Monolitos de obsidiana pulida. Algunos inclinados hacia atrás para reflejar el cielo.
     for (x, z, sx, sy, sz, a, tilt) in [
         (17.0, 9.0, 2.2f32, 1.8f32, 1.6f32, 0.3f32, 0.0f32),
         (20.5, 4.0, 1.5, 1.5, 1.5, 0.8, 0.0),
         (-18.0, -17.0, 2.4, 2.0, 1.6, -0.4, 0.0),
-        (-8.0, 10.5, 2.6, 3.0, 0.7, -0.5, -0.38),
+        (-9.5, 12.0, 2.6, 3.0, 0.7, -0.5, -0.38),
     ] {
-        let g = sand_height(x as i32, z as i32) as f32;
+        let g = sand_height(x as i32, z as i32);
         let c = Vec3::new(x, g - 0.3 + sy * 0.5, z);
         o.push(
             Object::cube(c - Vec3::new(sx, sy, sz) * 0.5, c + Vec3::new(sx, sy, sz) * 0.5, OBSIDIAN)
                 .rotated(Mat3::rot_y(a).mul(&Mat3::rot_x(tilt)), c),
         );
     }
+
+    // Zangetsu, a escala humana, clavada en la arena junto a la calzada (primer plano).
+    build_zangetsu(&mut o, Vec3::new(1.6, GROUND_Y, 42.2));
     o
 }
 
-/// Las Noches: tambor de bloques, cornisa, cúpula baja escalonada, cinco torrecillas,
-/// puerta frontal, y un corte de maqueta que revela el cielo falso y el salón del trono.
+/// Calzada de losas de obsidiana pulida con bordillo de concreto, de la puerta al frente.
+fn build_causeway(o: &mut Vec<Object>) {
+    let z0 = DOME_C.z + DRUM_R + 1.8;
+    let z1 = 60.0;
+    let w = CAUSEWAY_HALF_W;
+    let mut z = z0;
+    while z < z1 {
+        // Losas de 2 bloques de largo, unidas (la textura marca las juntas).
+        o.push(cube_at(-w + 0.3, GROUND_Y - 0.5, z, 2.0 * w - 0.6, 0.56, 2.0, OBSIDIAN).with_uv_scale(0.5));
+        z += 2.0;
+    }
+    // Bordillos.
+    for side in [-1.0f32, 1.0] {
+        o.push(cube_at(side * w - 0.3, GROUND_Y - 0.5, z0, 0.6, 0.75, z1 - z0, STONE));
+    }
+}
+
+/// Las Noches: tambor, cornisa, cúpula baja escalonada, cinco torrecillas, puerta
+/// iluminada, y un corte de maqueta que revela el cielo falso y el salón del trono.
 fn build_las_noches(o: &mut Vec<Object>) {
     let c = DOME_C;
     let inner = c + Vec3::new(0.0, 2.0, 0.0);
-    // Medio bloque por celda: las curvas del tambor y la cúpula se ven más redondas.
-    const CS: f32 = 0.5;
     let r = ((DRUM_R + 1.0) / CS).ceil() as i32;
     // Las caras que miran hacia el interior usan el material "cielo falso".
     let shell = |mut b: Object| {
@@ -255,26 +287,37 @@ fn build_las_noches(o: &mut Vec<Object>) {
     let top = |d: f32| {
         c.y + DRUM_H + 0.7 + (DOME_H * (1.0 - (d / DRUM_R).powi(2)).max(0.0).sqrt() / CS).round() * CS
     };
-    let cell = |x: f32, z: f32, y0: f32, y1: f32| cube_at(x - CS * 0.5, y0, z - CS * 0.5, CS, y1 - y0, CS, STONE);
+    let cell = |x: f32, z: f32, y0: f32, y1: f32, m: u16| cube_at(x - CS * 0.5, y0, z - CS * 0.5, CS, y1 - y0, CS, m);
     for di in -r..=r {
         for dj in -r..=r {
             let (x, z) = (c.x + di as f32 * CS, c.z + dj as f32 * CS);
             let d = dist_to_center(x, z);
+            if d < DRUM_R - 1.0 {
+                // Piso interior de mármol pulido (también bajo el corte).
+                o.push(cell(x, z, 0.0, c.y, MARBLE));
+            }
             if in_cut(x, z) {
                 continue;
             }
-            // Pared del tambor.
+            // Pared del tambor, con una banda de ventanas encendidas en la cara exterior.
             if d >= DRUM_R - 1.2 && d < DRUM_R {
-                o.push(shell(cell(x, z, 1.0, c.y + DRUM_H)));
+                let window = d >= DRUM_R - CS && (azimuth(x, z) / 7.5).fract() < 0.3;
+                if window {
+                    o.push(shell(cell(x, z, 0.0, 5.6, STONE)));
+                    o.push(cell(x, z, 5.6, 6.3, LIGHT));
+                    o.push(shell(cell(x, z, 6.3, c.y + DRUM_H, STONE)));
+                } else {
+                    o.push(shell(cell(x, z, 0.0, c.y + DRUM_H, STONE)));
+                }
             }
             // Cornisa que sobresale.
             if d >= DRUM_R - 1.2 && d < DRUM_R + 0.7 {
-                o.push(shell(cell(x, z, c.y + DRUM_H, c.y + DRUM_H + 0.7)));
+                o.push(shell(cell(x, z, c.y + DRUM_H, c.y + DRUM_H + 0.7, STONE)));
             }
-            // Cúpula escalonada: columnas macizas desde la parte alta del tambor.
-            // (Su cara inferior forma el techo plano del "cielo falso".)
+            // Cúpula escalonada: columnas macizas desde la parte alta del tambor
+            // (su cara inferior forma el techo del "cielo falso").
             if d < DRUM_R - 0.2 {
-                o.push(shell(cell(x, z, c.y + DRUM_H, top(d))));
+                o.push(shell(cell(x, z, c.y + DRUM_H, top(d), STONE)));
             }
         }
     }
@@ -285,11 +328,13 @@ fn build_las_noches(o: &mut Vec<Object>) {
         let h = 2.6 - (k as f32).abs() * 0.4;
         o.push(cube_at(x - 0.35, roof - 0.5, c.z - 0.5, 0.7, h, 1.0, STONE));
     }
-    // Puerta frontal (bloque con vano oscuro).
+    // Puerta frontal con el vano iluminado desde adentro.
     let front = c.z + DRUM_R;
-    o.push(cube_at(c.x - 2.8, 0.0, front - 1.5, 5.6, 5.5, 3.5, STONE));
+    o.push(cube_at(c.x - 2.8, 0.0, front - 1.5, 1.9, 5.5, 3.5, STONE));
+    o.push(cube_at(c.x + 0.9, 0.0, front - 1.5, 1.9, 5.5, 3.5, STONE));
+    o.push(cube_at(c.x - 0.9, 4.2, front - 1.5, 1.8, 1.3, 3.5, STONE));
     o.push(cube_at(c.x - 3.1, 5.5, front - 1.5, 6.2, 0.5, 3.8, STONE));
-    o.push(cube_at(c.x - 0.9, 1.0, front + 1.95, 1.8, 3.2, 0.08, OBSIDIAN));
+    o.push(cube_at(c.x - 0.9, 1.0, front - 1.4, 1.8, 3.2, 0.1, LIGHT));
 
     // Interior: estrado y trono.
     o.push(cube_at(c.x - 3.0, 1.0, c.z - 5.0, 6.0, 0.5, 4.0, STONE));
@@ -304,47 +349,65 @@ fn build_las_noches(o: &mut Vec<Object>) {
     }
 }
 
-/// Torre cilíndrica de bloques con base acampanada. Los niveles consecutivos de una
-/// misma celda se unen en un solo bloque alto para mantener pocos objetos.
-fn build_tower(o: &mut Vec<Object>, cx: f32, cz: f32, r0: f32, h: f32) {
-    const CS: f32 = 0.5; // medio bloque por celda y por nivel
+/// Torre cilíndrica de bloques con base acampanada y ventanas rasgadas encendidas.
+/// Los niveles consecutivos iguales de una misma celda se unen en un solo bloque alto.
+fn build_tower(o: &mut Vec<Object>, cx: f32, cz: f32, r0: f32, h: f32, seed: u32) {
+    const TS: f32 = 0.25; // cuarto de bloque por celda y por nivel
     let radius = |y: f32| r0 + 3.0 * (-y / 3.5).exp();
-    let base = sand_height(cx as i32, cz as i32) as f32 - 0.5;
-    let rmax = (radius(0.0) / CS).ceil() as i32 + 1;
-    let levels = (h / CS) as i32;
+    let base = GROUND_Y - 0.5;
+    let rmax = (radius(0.0) / TS).ceil() as i32 + 1;
+    let levels = (h / TS) as i32;
+    // Ventanas: rendijas verticales a ciertas alturas y en un ángulo propio de cada torre.
+    let win_angle = (hash_u32(seed * 31 + 5) % 360) as f32;
+    let is_window = |x: f32, z: f32, y: f32, d: f32, r: f32| {
+        if d < r - TS || y < 8.0 {
+            return false;
+        }
+        let a = (x - cx).atan2(z - cz).to_degrees().rem_euclid(360.0);
+        let da = ((a - win_angle + 540.0) % 360.0 - 180.0).abs();
+        let band = ((y - 8.0) / 5.0).fract();
+        da < 7.0 && band > 0.15 && band < 0.55
+    };
     for di in -rmax..=rmax {
         for dj in -rmax..=rmax {
-            let (x, z) = (cx + di as f32 * CS, cz + dj as f32 * CS);
+            let (x, z) = (cx + di as f32 * TS, cz + dj as f32 * TS);
             let d = ((x - cx).powi(2) + (z - cz).powi(2)).sqrt();
-            let mut run: Option<i32> = None;
+            // Cada nivel es: 0 = vacío, 1 = muro, 2 = ventana.
+            let mut run: Option<(i32, u8)> = None;
             for l in 0..=levels {
-                let y = (l as f32 + 0.5) * CS;
-                let inside = if l == levels {
-                    false
+                let y = (l as f32 + 0.5) * TS;
+                let kind: u8 = if l == levels {
+                    0
                 } else if l >= levels - 2 {
-                    d < radius(y) // tapa superior
+                    (d < radius(y)) as u8
                 } else {
                     let r = radius(y);
-                    d < r && d >= r - 1.0
-                };
-                match (inside, run) {
-                    (true, None) => run = Some(l),
-                    (false, Some(s)) => {
-                        let (y0, y1) = (base + s as f32 * CS, base + l as f32 * CS);
-                        o.push(cube_at(x - CS * 0.5, y0, z - CS * 0.5, CS, y1 - y0, CS, STONE));
-                        run = None;
+                    if d < r && d >= r - 0.75 {
+                        if is_window(x, z, y, d, r) { 2 } else { 1 }
+                    } else {
+                        0
                     }
-                    _ => {}
+                };
+                match run {
+                    Some((_, k)) if k == kind => {}
+                    Some((s, k)) => {
+                        let (y0, y1) = (base + s as f32 * TS, base + l as f32 * TS);
+                        let m = if k == 2 { LIGHT } else { STONE };
+                        o.push(cube_at(x - TS * 0.5, y0, z - TS * 0.5, TS, y1 - y0, TS, m));
+                        run = if kind > 0 { Some((l, kind)) } else { None };
+                    }
+                    None if kind > 0 => run = Some((l, kind)),
+                    None => {}
                 }
             }
         }
     }
 }
 
-/// Árbol muerto de cuarzo: tronco delgado y torcido, ramas que se dividen dos veces.
+/// Árbol muerto de cuarzo: tronco torcido y ramas que se dividen dos veces.
 fn build_dead_tree(o: &mut Vec<Object>, base: Vec3, seed: u32, scale: f32) {
     let rnd = |k: u32| (hash_u32(seed * 977 + k) & 0xFFFF) as f32 / 65535.0;
-    let ground = sand_height(base.x.round() as i32, base.z.round() as i32) as f32;
+    let ground = sand_height(base.x.round() as i32, base.z.round() as i32);
     let mut p = Vec3::new(base.x, ground - 0.4, base.z);
     let mut rot = Mat3::IDENTITY;
     let mut w = 0.85 * scale;
@@ -383,5 +446,44 @@ fn push_branch(o: &mut Vec<Object>, start: Vec3, rot: Mat3, w: f32, len: f32) {
         )
         .rotated(rot, start)
         .with_uv_scale(0.6),
+    );
+}
+
+/// Zangetsu (Shikai) a escala real (1 u ≈ 4 m): hoja de ~1.6 m x 0.4 m, sin guarda,
+/// con el mango vendado. Clavada e inclinada en la arena.
+pub fn build_zangetsu(o: &mut Vec<Object>, p: Vec3) {
+    let rot = Mat3::rot_y(0.35).mul(&Mat3::rot_x(-0.2)).mul(&Mat3::rot_z(0.12));
+    let blade_w = 0.10;
+    let blade_l = 0.40;
+    let t = 0.012;
+    let sunk = 0.08;
+    // Hoja de acero.
+    o.push(
+        Object::cube(
+            Vec3::new(p.x - blade_w * 0.5, p.y - sunk, p.z - t * 0.5),
+            Vec3::new(p.x + blade_w * 0.5, p.y + blade_l - sunk, p.z + t * 0.5),
+            STEEL,
+        )
+        .rotated(rot, p)
+        .with_uv_scale(4.0),
+    );
+    // Lomo oscuro.
+    o.push(
+        Object::cube(
+            Vec3::new(p.x - blade_w * 0.5 - 0.012, p.y - sunk, p.z - t * 0.7),
+            Vec3::new(p.x - blade_w * 0.5, p.y + blade_l - sunk + 0.01, p.z + t * 0.7),
+            OBSIDIAN,
+        )
+        .rotated(rot, p),
+    );
+    // Mango vendado.
+    o.push(
+        Object::cube(
+            Vec3::new(p.x - 0.014, p.y + blade_l - sunk, p.z - 0.014),
+            Vec3::new(p.x + 0.014, p.y + blade_l - sunk + 0.13, p.z + 0.014),
+            HILT,
+        )
+        .rotated(rot, p)
+        .with_uv_scale(20.0),
     );
 }

@@ -25,33 +25,33 @@ pub struct VideoSettings {
 #[derive(Clone, Copy)]
 struct Key(f32, f32, f32, f32, [f32; 3]);
 
-const HERO: [f32; 3] = [0.0, 11.5, -4.0];
+const HERO: [f32; 3] = [0.0, 7.0, -4.0];
 const CENTER: [f32; 3] = [0.0, 8.0, -4.0];
-const TREE: [f32; 3] = [-14.0, 7.0, 15.5];
-const MONOLITH: [f32; 3] = [-8.0, 2.4, 10.5];
+const TREE: [f32; 3] = [-14.0, 4.5, 15.5];
 const HALL: [f32; 3] = [-4.0, 6.0, -9.0];
+const SWORD: [f32; 3] = [1.6, 1.25, 42.2];
 
 const KEYS: &[Key] = &[
-    // Vista héroe (composición de la referencia) con acercamiento lento.
-    Key(0.0, -8.0, 5.0, 66.0, HERO),
-    Key(4.0, -8.0, 5.0, 56.0, HERO),
+    // Al ras del suelo sobre la calzada de obsidiana: el reflejo de la puerta y la cúpula.
+    Key(0.0, 0.0, -6.4, 50.0, HERO),
+    Key(5.0, 0.0, -5.0, 45.0, HERO),
+    // Grúa hacia arriba: la fortaleza completa entre la niebla.
+    Key(9.0, 0.0, 14.0, 62.0, CENTER),
     // Rotación completa del diorama (360°).
-    Key(19.0, 352.0, 12.0, 62.0, CENTER),
-    // Monolito de obsidiana: refleja el cielo detrás del espectador, donde está la Garganta.
-    Key(23.0, 382.0, 14.0, 12.0, MONOLITH),
-    Key(27.0, 374.0, 15.0, 11.0, MONOLITH),
+    Key(24.0, 360.0, 14.0, 62.0, CENTER),
+    // El corte de la cúpula: el cielo falso y su reflejo en el mármol pulido.
+    Key(30.0, 502.0, 20.0, 30.0, HALL),
+    Key(35.0, 515.0, 26.0, 26.0, HALL),
     // Árbol de cuarzo en primer plano: refracción de las torres y la cúpula.
-    Key(32.0, 396.0, 6.0, 15.0, TREE),
-    Key(36.0, 410.0, 9.0, 14.0, TREE),
-    // Corte de la cúpula: el cielo falso y su reflejo en el mármol pulido.
-    Key(41.0, 503.0, 20.0, 30.0, HALL),
-    Key(45.0, 515.0, 26.0, 26.0, HALL),
-    // Alejarse: el diorama completo contra el skybox.
-    Key(50.0, 540.0, 28.0, 88.0, CENTER),
-    Key(54.0, 600.0, 16.0, 76.0, CENTER),
+    Key(40.0, 396.0, 4.0, 9.0, TREE),
+    Key(44.0, 412.0, 6.0, 8.0, TREE),
+    // Zangetsu a escala real, clavada en la calzada, con su reflejo y Las Noches detrás.
+    Key(49.0, 360.0, 6.0, 1.6, SWORD),
+    Key(52.0, 372.0, 8.0, 1.25, SWORD),
+    // Alejarse: el desierto infinito bajo la niebla y el skybox.
+    Key(56.5, 380.0, 22.0, 100.0, CENTER),
     // Regreso a la vista héroe.
-    Key(58.0, 712.0, 5.0, 56.0, HERO),
-    Key(60.0, 712.0, 5.0, 56.0, HERO),
+    Key(60.0, 360.0, -6.4, 50.0, HERO),
 ];
 
 pub fn duration() -> f32 {

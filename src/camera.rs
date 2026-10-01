@@ -14,16 +14,21 @@ pub struct Camera {
     pub fov_deg: f32,
 }
 
-/// Con la distancia mínima la cámara siempre queda fuera del diorama (radio horizontal ~36.5 + 4 de desplazamiento del objetivo).
-pub const MIN_DISTANCE: f32 = 42.0;
-pub const MAX_DISTANCE: f32 = 130.0;
-pub const MIN_PITCH: f32 = 0.02;
+/// Con la distancia mínima la cámara queda fuera de todo lo que sobresale del suelo
+/// (radio ~41 desde el pivote; lo verifica una prueba).
+pub const MIN_DISTANCE: f32 = 46.0;
+pub const MAX_DISTANCE: f32 = 140.0;
+pub const MIN_PITCH: f32 = -0.30;
 pub const MAX_PITCH: f32 = 1.35;
+/// Altura mínima de la cámara: a la altura de los ojos de una persona (1 u ≈ 4 m).
+pub const MIN_HEIGHT: f32 = 1.4;
 
 impl Camera {
     pub fn clamp(&mut self) {
         self.distance = self.distance.clamp(MIN_DISTANCE, MAX_DISTANCE);
-        self.pitch = self.pitch.clamp(MIN_PITCH, MAX_PITCH);
+        // La inclinación mínima depende de la distancia: nunca bajo el suelo.
+        let min_pitch = ((MIN_HEIGHT - self.target.y) / self.distance).clamp(-1.0, 1.0).asin().max(MIN_PITCH);
+        self.pitch = self.pitch.clamp(min_pitch, MAX_PITCH);
     }
 
     pub fn position(&self) -> Vec3 {

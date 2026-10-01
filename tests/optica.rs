@@ -106,24 +106,20 @@ fn skybox_ida_y_vuelta() {
 
 #[test]
 fn escena_dentro_de_limites() {
-    use las_noches::scene::build_diorama;
+    use las_noches::scene::{build_diorama, GROUND_Y, PIVOT};
     let objs = build_diorama();
-    let mut cubes = 0;
-    let mut hmin = Vec3::splat(f32::INFINITY);
-    let mut hmax = Vec3::splat(f32::NEG_INFINITY);
+    let mut r_max = 0.0f32;
     for o in &objs {
-        if matches!(o.shape, las_noches::geometry::Shape::Cube { .. }) {
-            cubes += 1;
-        }
         let (a, b) = o.bounds();
-        hmin = hmin.min(a);
-        hmax = hmax.max(b);
+        // Se ignoran el suelo infinito y lo que casi no sobresale (calzada, Zangetsu bajo la cámara).
+        if b.y <= GROUND_Y + 0.6 || b.x - a.x > 500.0 {
+            continue;
+        }
+        for (x, z) in [(a.x, a.z), (a.x, b.z), (b.x, a.z), (b.x, b.z)] {
+            r_max = r_max.max(((x - PIVOT.x).powi(2) + (z - PIVOT.z).powi(2)).sqrt());
+        }
     }
-    println!("objetos: {}  cubos: {}  límites: {:?} .. {:?}", objs.len(), cubes, hmin, hmax);
-    // La distancia mínima de zoom deja la cámara fuera de todo el diorama
-    // (la cámara interactiva mira siempre a un punto sobre el pivote).
-    // Radio horizontal máximo medido desde el pivote de rotación.
-    let p = las_noches::scene::PIVOT;
-    let r = ((hmax.x - p.x).abs().max((hmin.x - p.x).abs()).powi(2) + (hmax.z - p.z).abs().max((hmin.z - p.z).abs()).powi(2)).sqrt();
-    assert!(r < las_noches::camera::MIN_DISTANCE, "radio horizontal {r}");
+    println!("objetos: {}  radio máximo de lo que sobresale: {r_max:.1}", objs.len());
+    // A la distancia mínima de zoom (y altura mínima) la cámara queda fuera de todo.
+    assert!(r_max < las_noches::camera::MIN_DISTANCE * 0.98, "radio {r_max}");
 }

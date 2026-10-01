@@ -21,9 +21,9 @@ use std::time::Instant;
 pub const EXPOSURE: f32 = 1.35;
 
 /// Vista "héroe": 3/4, ligeramente baja, mirando la torre y la luna a través del bosque.
-pub const HERO_YAW_DEG: f32 = -8.0;
+pub const HERO_YAW_DEG: f32 = 0.0;
 pub fn hero_camera() -> Camera {
-    Camera { target: Vec3::new(0.0, 11.5, -4.0), pitch: 0.09, distance: 56.0, fov_deg: 45.0 }
+    Camera { target: Vec3::new(0.0, 7.0, -4.0), pitch: -0.112, distance: 50.0, fov_deg: 45.0 }
 }
 
 pub struct Args {

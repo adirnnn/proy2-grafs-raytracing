@@ -60,11 +60,13 @@ pub const QUARTZ: u16 = 2;
 pub const OBSIDIAN: u16 = 3;
 pub const MARBLE: u16 = 4;
 pub const FAKE_SKY: u16 = 5;
-pub const BASALT: u16 = 6;
+pub const STEEL: u16 = 6;
+pub const LIGHT: u16 = 7;
+pub const HILT: u16 = 8;
 
-pub const MATERIALS: [Material; 7] = [
+pub const MATERIALS: [Material; 9] = [
     // 1. Arena de Hueco Mundo: blanca grisácea, mate, sin reflejo.
-    Material { albedo: 0.66, specular: 0.04, shininess: 8.0, ..Material::base("Arena de Hueco Mundo", "sand") },
+    Material { albedo: 0.66, specular: 0.04, shininess: 8.0, uv_scale: 3.0, ..Material::base("Arena de Hueco Mundo", "sand") },
     // 2. Concreto blanco de Las Noches: satinado, reflejo mínimo.
     Material {
         albedo: 0.72,
@@ -76,7 +78,7 @@ pub const MATERIALS: [Material; 7] = [
     },
     // 3. Cuarzo de los árboles muertos: translúcido y refractivo.
     Material {
-        albedo: 0.22,
+        albedo: 0.32,
         specular: 0.8,
         shininess: 180.0,
         transparency: 0.70,
@@ -85,12 +87,12 @@ pub const MATERIALS: [Material; 7] = [
         transmit_tint: Vec3::new(0.94, 0.97, 1.0),
         ..Material::base("Cuarzo", "quartz")
     },
-    // 4. Obsidiana pulida de los monolitos: espejo oscuro.
+    // 4. Obsidiana pulida (calzada y monolitos): espejo oscuro.
     Material {
-        albedo: 0.18,
+        albedo: 0.15,
         specular: 0.9,
         shininess: 300.0,
-        reflectivity: 0.60,
+        reflectivity: 0.65,
         ..Material::base("Obsidiana", "obsidian")
     },
     // 5. Mármol pulido del salón del trono: blanco con vetas, refleja el cielo falso.
@@ -104,6 +106,16 @@ pub const MATERIALS: [Material; 7] = [
     },
     // Extra: interior de la cúpula ("cielo falso" de Las Noches), emisivo.
     Material { albedo: 0.35, emission: 1.0, uv_scale: 0.125, ..Material::base("Cielo falso", "fake_sky") },
-    // Extra: basalto del zócalo del diorama.
-    Material { albedo: 0.6, specular: 0.15, shininess: 20.0, ..Material::base("Basalto", "basalt") },
+    // Extra: acero de Zangetsu, metálico y muy reflectivo.
+    Material {
+        albedo: 0.22,
+        specular: 1.0,
+        shininess: 500.0,
+        reflectivity: 0.80,
+        ..Material::base("Acero de Zangetsu", "steel")
+    },
+    // Extra: ventanas encendidas (emisivas; no iluminan a otros objetos).
+    Material { albedo: 0.2, emission: 2.2, ..Material::base("Ventanas encendidas", "light") },
+    // Extra: vendaje del mango de Zangetsu.
+    Material { albedo: 0.8, specular: 0.05, shininess: 10.0, ..Material::base("Vendaje", "hilt") },
 ];

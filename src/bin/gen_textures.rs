@@ -121,13 +121,22 @@ fn gen_block_textures() {
         let sky = Vec3::new(0.36, 0.60, 0.95).lerp(Vec3::new(0.60, 0.80, 1.0), v);
         sky.lerp(Vec3::new(0.97, 0.98, 1.0), cloud)
     });
-    // 7. Basalto: gris oscuro, rugoso y pixelado.
-    make("basalt", |u, v, x, y| {
-        let (px, py) = px16(x, y);
-        let n = h01(px, py, 40) * 0.5 + fbm(u, v, 4, 3, 41) * 0.5;
-        let seam = x < 2 || y < 2;
-        let c = Vec3::new(0.17, 0.18, 0.19) * (0.75 + 0.5 * n);
-        if seam { c * 0.6 } else { c }
+    // Acero cepillado: vetas finas a lo largo de la hoja, un poco azulado.
+    make("steel", |u, v, _, _| {
+        let brush = fbm(u * 0.25, v * 8.0, 4, 3, 6);
+        let fine = h01((u * 4.0 * TEX as f32) as i32 / 8, (v * TEX as f32) as i32, 12);
+        Vec3::new(0.72, 0.75, 0.80) * (0.82 + 0.14 * brush + 0.05 * fine)
+    });
+    // Luz de ventana: blanco azulado con un poco de variación (se ve encendida).
+    make("light", |u, v, _, _| {
+        let n = fbm(u, v, 2, 3, 77);
+        Vec3::new(0.78, 0.90, 1.0) * (0.85 + 0.15 * n)
+    });
+    // Vendaje del mango: tela blanca en diagonal con separaciones oscuras.
+    make("hilt", |u, v, _, _| {
+        let d = ((u + v) * 4.0).fract();
+        let gap = smoothstep(0.0, 0.08, d) * (1.0 - smoothstep(0.9, 1.0, d));
+        Vec3::new(0.88, 0.86, 0.82).lerp(Vec3::new(0.12, 0.10, 0.10), 1.0 - gap)
     });
 }
 

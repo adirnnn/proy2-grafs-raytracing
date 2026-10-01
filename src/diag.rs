@@ -61,6 +61,7 @@ pub fn run(assets: &Path, out: &Path) {
         lights: vec![Light::Directional { dir: Vec3::new(0.3, 0.8, 0.5).normalized(), color: Vec3::splat(2.2), spread: 0.0 }],
         ambient_sky: Vec3::splat(0.25),
         ambient_ground: Vec3::splat(0.15),
+        fog_density: 0.0,
     };
     let q = Quality { max_depth: 8, soft_shadows: false };
     let views = [

@@ -87,10 +87,29 @@ impl<'a> Tracer<'a> {
         Vec3::ZERO
     }
 
+    /// Color de la niebla en la dirección `d`: el cielo justo sobre el horizonte, para que
+    /// el suelo lejano se funda sin costura con el skybox.
+    fn fog_color(&self, d: Vec3) -> Vec3 {
+        let w = self.view.rot.apply(d);
+        let h = Vec3::new(w.x, w.y.max(0.04), w.z).normalized();
+        self.scene.skybox.sample(h)
+    }
+
     pub fn trace(&self, ray: &Ray, depth: u32, weight: f32, rng: &mut Rng) -> Vec3 {
         let Some(hit) = self.scene.bvh.intersect(&self.scene.objects, ray, EPS, FAR) else {
             return self.sky(ray.dir);
         };
+        let c = self.shade(ray, &hit, depth, weight, rng);
+        // Niebla exponencial con la distancia: oculta el horizonte del suelo y da escala.
+        if self.scene.fog_density > 0.0 {
+            let f = 1.0 - (-hit.t * self.scene.fog_density).exp();
+            return c.lerp(self.fog_color(ray.dir), f);
+        }
+        c
+    }
+
+    fn shade(&self, ray: &Ray, hit: &crate::geometry::Hit, depth: u32, weight: f32, rng: &mut Rng) -> Vec3 {
+        let hit = *hit;
         let m: &Material = &self.scene.materials[hit.material as usize];
         let tex = self.scene.textures[hit.material as usize].sample(hit.u * m.uv_scale, hit.v * m.uv_scale, true);
 
@@ -121,6 +140,10 @@ impl<'a> Tracer<'a> {
                 Light::Point { pos, color, radius } => {
                     let to = pos - hit.point;
                     let dist = to.length();
+                    // Alcance máximo: más allá de 6 radios la luz se considera nula.
+                    if dist > 6.0 * radius {
+                        continue;
+                    }
                     // Caída suave con la distancia.
                     let fall = 1.0 / (1.0 + (dist / radius) * (dist / radius));
                     (to / dist, color * fall, dist)
