@@ -16,6 +16,9 @@ Como en una maqueta de arquitectura, un **corte** en la parte trasera de la fort
 Todo está hecho con un raytracer escrito desde cero en **Rust, usando únicamente la biblioteca estándar** (0 dependencias). Las texturas y el skybox también son originales y los genera el propio proyecto.
 
 ![Vista héroe del diorama](docs/img/hero.png)
+*Vista héroe: la calzada de obsidiana refleja la puerta encendida, la cúpula y su anillo de ventanas; arriba, la luna creciente entre nubes de tormenta.*
+
+**Contenido:** [Video](#video) · [Cómo ejecutar](#cómo-ejecutar) · [Controles](#controles) · [Concepto](#concepto-y-dirección-de-arte) · [Rúbrica y evidencia](#rúbrica-y-evidencia) · [Materiales](#materiales) · [Arquitectura](#arquitectura) · [Rendimiento](#rendimiento) · [Verificación](#verificación) · [Vistas](#vistas) · [Limitaciones](#limitaciones-conocidas) · [Recursos](#recursos-y-licencias)
 
 ## Video
 
@@ -88,6 +91,22 @@ Eso abre la ventana interactiva. Otros modos:
 
 ---
 
+## Concepto y dirección de arte
+
+- **Referencia:** Las Noches tal como aparece en *Bleach*:
+  - un tambor blanco gigantesco con una cúpula baja, con un grupo de torrecillas encima;
+  - torres cilíndricas con la base ensanchada;
+  - un desierto de arena blanca con árboles muertos de cuarzo;
+  - una luna creciente fija en un cielo de noche eterna.
+- **Escala:** la cámara empieza a la altura de una persona, sobre la calzada, con Zangetsu (≈2 m) clavada a su lado. Así la fortaleza (≈85 m de diámetro, torres de ≈115 m) se siente colosal.
+- **Luz y atmósfera:**
+  - La escena es oscura; la luz viene de fuentes concretas: la puerta abierta, las ventanas, el cielo falso del interior y el contraluz de la luna.
+  - La niebla da perspectiva atmosférica y esconde los bordes del mundo: el desierto parece no terminar.
+- **Historia en la imagen:**
+  - Afuera es noche eterna; adentro de la cúpula hay un cielo de día artificial, que el corte de maqueta deja ver al girar el diorama.
+  - La Garganta roja está detrás del espectador y solo aparece en los reflejos (espada y obsidiana).
+- **Paleta:** blancos y grises fríos, negro de obsidiana, cian del cielo falso y un único acento rojo.
+
 ## Rúbrica y evidencia
 
 > Nota: los puntos listados en la rúbrica suman **130**, mientras que la nota máxima indicada es **100**. Este proyecto cubre todos los criterios; la forma de escalar la nota la define el catedrático.
@@ -126,7 +145,24 @@ La parte difusa pesa `1 − reflectividad − transparencia`. En materiales tran
 | + | Ventanas encendidas (emisivo 2.2) | [`light.bmp`](assets/textures/light.bmp) | 0.20 | — | 0 | 0 | — | Ventanas, banda del tambor, vano de la puerta | hero |
 | + | Vendaje | [`hilt.bmp`](assets/textures/hilt.bmp) | 0.80 | 0.05, 10 | 0 | 0 | — | Mango de Zangetsu | zangetsu |
 
+**Texturas generadas** (de izquierda a derecha): arena, concreto, cuarzo, obsidiana, mármol, acero, cielo falso, luz de ventana, vendaje.
+
 ![Texturas](docs/img/texturas.png)
+
+**Cada material en la escena:**
+
+<table>
+<tr>
+<td><img src="docs/img/mat_arena.png" width="300"><br><b>1. Arena</b>: mate, sin reflejo</td>
+<td><img src="docs/img/mat_concreto.png" width="300"><br><b>2. Concreto</b>: torres y tambor</td>
+<td><img src="docs/img/mat_cuarzo.png" width="300"><br><b>3. Cuarzo</b>: refracta el anillo de luz de la cúpula</td>
+</tr>
+<tr>
+<td><img src="docs/img/hero.png" width="300"><br><b>4. Obsidiana</b>: la calzada como espejo</td>
+<td><img src="docs/img/mat_marmol.png" width="300"><br><b>5. Mármol pulido</b>: refleja el cielo falso</td>
+<td><img src="docs/img/zangetsu.png" width="300"><br><b>6. Acero</b>: Zangetsu y su reflejo</td>
+</tr>
+</table>
 
 ## Arquitectura
 
@@ -238,12 +274,22 @@ En la ventana (calidad 2), mientras se mueve se renderiza a 426×240 y luego se 
   - El cubo con la letra "F" confirma la orientación de las UV.
 
 ![Diagnóstico de frente](docs/img/diag_frente.png)
+*De izquierda a derecha:*
+- *cubo UV;*
+- *lámina de cuarzo de frente, que no desplaza el tablero;*
+- *lámina girada 40°, que sí lo desplaza;*
+- *cubo de cuarzo con reflexión interna;*
+- *espejo que refleja el tablero y el cielo estrellado.*
+
 ![Diagnóstico lateral](docs/img/diag_lateral.png)
 
 ## Vistas
 
 ![Cuatro ángulos](docs/img/angulos.png)
+*El diorama girado 0°, 90°, 180° y 270°. A 180° se ve el corte con el cielo falso iluminado.*
+
 ![Zoom cerca y lejos](docs/img/zoom.png)
+*Zoom por distancia real de la cámara: 46 unidades (izquierda) y 130 (derecha). La niebla esconde el final del desierto.*
 
 ## Limitaciones conocidas
 
@@ -260,4 +306,5 @@ En la ventana (calidad 2), mientras se mueve se renderiza a 426×240 y luego se 
 
 - **Todo el arte es original**: texturas, skybox, luna, nubes y Garganta se generan con `src/bin/gen_textures.rs`. No se usaron imágenes de terceros.
 - La escena es un homenaje (fan art) a *Bleach* de Tite Kubo. Los nombres Hueco Mundo, Las Noches, Garganta y Zangetsu pertenecen a su obra; aquí no se usa ningún recurso de la serie.
+- **Autor:** adirnnn.
 - **Herramienta de desarrollo (no es dependencia del proyecto):** el video MP4 y la vista previa GIF se armaron a partir de los cuadros BMP con **FFmpeg**. El programa no la usa ni la necesita para compilar o ejecutarse.
