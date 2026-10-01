@@ -75,8 +75,6 @@ impl Scene {
             },
             // Contraluz de la luna (detrás de Las Noches): recorta las siluetas.
             Light::Directional { dir: MOON_DIR.normalized(), color: Vec3::new(0.80, 0.88, 1.0) * 0.9, spread: 0.02 },
-            // Resplandor rojo de la Garganta, que se abre detrás del espectador.
-            Light::Directional { dir: GARGANTA_DIR.normalized(), color: Vec3::new(0.55, 0.05, 0.06) * 0.05, spread: 0.06 },
             // El "cielo falso" de adentro: se derrama por el corte de la cúpula.
             Light::Point { pos: DOME_C + Vec3::new(-2.5, 6.0, -2.5), color: Vec3::new(1.7, 2.3, 3.2) * 1.4, radius: 7.0 },
             // La puerta abierta: luz del interior que cae sobre la calzada.
